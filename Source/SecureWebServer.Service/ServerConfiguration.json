@@ -1,0 +1,6 @@
+﻿{
+  "WebPort": 666,
+  "WebRoot": "WebRoot",
+  "DefaultPages": [ "index.html", "index.htm" ],
+  "DirectoryBrowsing": false
+}

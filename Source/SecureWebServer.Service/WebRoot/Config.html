@@ -1,0 +1,43 @@
+<html>
+<head>
+    <title>SecureWebServer - Configuration</title>
+</head>
+<body>
+    <h1>Configuration</h1>
+
+    <form method="POST" action="Config.html">
+        <table>
+            <thead>
+            <tr>
+                <th>Setting</th>
+                <th colspan="2">Value</th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Webport:</td>
+                    <td colspan="2"><input type="text" name="WebPort" value="{WebPort}"></td>
+                </tr>
+                <tr>
+                    <td>Webroot:</td>
+                    <td colspan="2"><input type="text" name="WebRoot" value="{WebRoot}"></td>
+                </tr>
+                <tr>
+                    <td>Default page:</td>
+                    <td colspan="2"><input type="text" name="DefaultPages" value="{DefaultPages}"></td>
+                </tr>
+                <tr>
+                    <td>Directory browsing</td>
+                    <td colspan="2"><input type="checkbox" name="DirectoryBrowsing" {DirectoryBrowsing}></td>
+                </tr>
+                <tr>
+                    <td><a href="#">Show Log</a></td>
+                    <td><input type="submit" value="Save"></td>
+                    <td><a href="/">Cancel</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+
+</body>
+</html>
