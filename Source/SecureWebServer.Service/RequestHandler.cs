@@ -87,16 +87,16 @@ namespace SecureWebServer.Service
         {
             ServerConfiguration config = ServerConfiguration.Get();
 
-            string htmlTemplate;
-
-            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
-                htmlTemplate = reader.ReadToEnd();
-
             if (request.HttpMethod == "POST")
             {
                 config.SetValues(request.FormData);
                 config.Save();
             }
+
+            string htmlTemplate;
+
+            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
+                htmlTemplate = reader.ReadToEnd();
 
             StringBuilder htmlBuilder = new StringBuilder(htmlTemplate);
             htmlBuilder.Replace("{WebPort}", config.WebPort.ToString());

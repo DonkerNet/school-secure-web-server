@@ -68,6 +68,9 @@
     <Content Include="WebRoot\Config.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="WebRoot\Images\trollface.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="WebRoot\Index.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

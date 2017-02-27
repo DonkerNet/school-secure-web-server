@@ -70,13 +70,15 @@ namespace SecureWebServer.Core.Request
 
             using (Socket clientSocket = (Socket)clientSocketObj)
             {
+                IPEndPoint endPoint = (IPEndPoint)clientSocket.RemoteEndPoint;
+
                 using (NetworkStream networkStream = new NetworkStream(clientSocket))
                 {
                     ResponseMessage response = null;
 
                     try
                     {
-                        RequestMessage request = RequestMessage.FromStream(networkStream);
+                        RequestMessage request = RequestMessage.Create(endPoint.Address, networkStream);
 
                         if (request != null)
                         {

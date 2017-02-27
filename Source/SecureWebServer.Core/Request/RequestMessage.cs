@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Web;
 using SecureWebServer.Core.Extensions;
@@ -11,6 +13,7 @@ namespace SecureWebServer.Core.Request
 {
     public class RequestMessage
     {
+        public IPAddress IpAddress { get; private set; }
         public string HttpMethod { get; private set; }
         public string Path { get; private set; }
         public string QueryString { get; private set; }
@@ -19,8 +22,9 @@ namespace SecureWebServer.Core.Request
         public NameValueCollection FormData { get; }
         public Stream Content { get; private set; }
 
-        private RequestMessage(string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData, Stream content)
+        private RequestMessage(IPAddress ipAddress, string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData, Stream content)
         {
+            IpAddress = ipAddress;
             HttpMethod = httpMethod;
             Path = path;
             QueryString = queryString;
@@ -30,55 +34,51 @@ namespace SecureWebServer.Core.Request
             Content = content;
         }
 
-        public static RequestMessage FromStream(Stream inputStream)
+        public static RequestMessage Create(IPAddress ipAddress, Stream inputStream)
         {
-            NameValueCollection headers;
-            NameValueCollection formData;
-            string httpMethod;
-            string path;
-            string queryString;
-            string httpVersion;
+            NameValueCollection headers = new NameValueCollection();
+            NameValueCollection formData = new NameValueCollection();
+            string httpMethod = null;
+            string path = null;
+            string queryString = null;
+            string httpVersion = null;
             Stream content = null;
 
-            const int bufferSize = 1024;
+            bool readRequestLine = false;
 
-            using (StreamReader reader = new StreamReader(inputStream, Encoding.ASCII, false, bufferSize, true))
+            foreach (string header in ReadHeaders(inputStream))
             {
-                // Read Request-Line
-
-                string line = reader.ReadLine();
-
-                // Chrome keeps a second connection opened for any future requests
-                // When Chrome is closed, this results in an "empty" request which we should ignore
-                if (string.IsNullOrEmpty(line))
-                    return null;
-
-                string[] requestLineParts = line.Split(new[] { ' ' }, 3);
-
-                if (requestLineParts.Length != 3)
-                    throw new RequestException(HttpStatusCode.BadRequest, "Request-Line malformed.");
-
-                headers = new NameValueCollection();
-                formData = new NameValueCollection();
-                httpMethod = requestLineParts[0].ToUpperInvariant();
-                httpVersion = requestLineParts[2];
-
-                string[] requestUriParts = requestLineParts[1].Trim('/').Split('?');
-                path = requestUriParts[0];
-                queryString = requestUriParts.Length > 1 ? requestUriParts[1] : string.Empty;
-
-                // Read headers
-
-                while (!string.IsNullOrEmpty(line = reader.ReadLine()))
+                if (!readRequestLine)
                 {
-                    string[] headerParts = line.Split(new[] { ':' }, 2);
+                    if (string.IsNullOrEmpty(header))
+                        return null;
 
-                    string headerName = headerParts[0].Trim();
-                    string headerValue = headerParts.Length > 1 ? headerParts[1].Trim() : string.Empty;
+                    string[] requestLineParts = header.Split(new[] { ' ' }, 3);
 
-                    headers.Add(headerName, headerValue);
+                    if (requestLineParts.Length != 3)
+                        throw new RequestException(HttpStatusCode.BadRequest, "Request-Line malformed.");
+
+                    httpMethod = requestLineParts[0].ToUpperInvariant();
+                    httpVersion = requestLineParts[2];
+
+                    string[] requestUriParts = requestLineParts[1].Trim('/').Split('?');
+                    path = requestUriParts[0];
+                    queryString = requestUriParts.Length > 1 ? requestUriParts[1] : string.Empty;
+
+                    readRequestLine = true;
+                    continue;
                 }
+
+                string[] headerParts = header.Split(new[] { ':' }, 2);
+
+                string headerName = headerParts[0].Trim();
+                string headerValue = headerParts.Length > 1 ? headerParts[1].Trim() : string.Empty;
+
+                headers.Add(headerName, headerValue);
             }
+
+            if (!readRequestLine)
+                return null;
 
             // Read body if the Content-Length header is present
             // TODO: what if there is a body but no Content-Length header?
@@ -101,7 +101,53 @@ namespace SecureWebServer.Core.Request
                 ParseFormData(headers, formData, content);
             }
 
-            return new RequestMessage(httpMethod, path, queryString, httpVersion, headers, formData, content);
+            return new RequestMessage(ipAddress, httpMethod, path, queryString, httpVersion, headers, formData, content);
+        }
+
+        /// <summary>
+        /// Enumerates through all the headers (including the Request-Line).
+        /// </summary>
+        private static IEnumerable<string> ReadHeaders(Stream inputStream)
+        {
+            // ASCII uses 1 byte per character
+
+            // We read one character at a time
+            // We don't use a StreamReader since it buffers more characters than we want
+
+            using (BinaryReader reader = new BinaryReader(inputStream, Encoding.ASCII, true))
+            {
+                StringBuilder builder = new StringBuilder();
+
+                while (true)
+                {
+                    char c;
+
+                    try
+                    {
+                        c = reader.ReadChar();
+                    }
+                    catch (EndOfStreamException)
+                    {
+                        yield break;
+                    }
+
+                    if (c == '\n')
+                    {
+                        string header = builder.ToString(0, builder.Length - 1);
+
+                        if (string.IsNullOrEmpty(header))
+                            yield break;
+
+                        yield return header;
+
+                        builder = new StringBuilder();
+                    }
+                    else
+                    {
+                        builder.Append(c);
+                    }
+                }
+            }
         }
 
         /// <summary>

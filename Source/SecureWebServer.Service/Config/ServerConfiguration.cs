@@ -94,7 +94,7 @@ namespace SecureWebServer.Service.Config
         {
             ServerConfiguration copy = Copy();
 
-            string json = JsonConvert.SerializeObject(copy);
+            string json = JsonConvert.SerializeObject(copy, Formatting.Indented);
 
             using (StreamWriter writer = new StreamWriter(FilePath, false))
             {
