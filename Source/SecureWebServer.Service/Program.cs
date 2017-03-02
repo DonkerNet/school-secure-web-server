@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using log4net.Config;
 using SecureWebServer.Core.Error;
 using SecureWebServer.Core.Request;
 using SecureWebServer.Service.Config;
@@ -10,6 +12,8 @@ namespace SecureWebServer.Service
     {
         static void Main(string[] args)
         {
+            XmlConfigurator.Configure(new FileInfo("log4net.config"));
+
             ServerConfiguration config = ServerConfiguration.Get();
 
             IRequestHandler requestHandler = new RequestHandler();

@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Web;
 using SecureWebServer.Core.Extensions;
@@ -13,18 +12,16 @@ namespace SecureWebServer.Core.Request
 {
     public class RequestMessage
     {
-        public IPAddress IpAddress { get; private set; }
-        public string HttpMethod { get; private set; }
-        public string Path { get; private set; }
-        public string QueryString { get; private set; }
-        public string HttpVersion { get; private set; }
+        public string HttpMethod { get; }
+        public string Path { get; }
+        public string QueryString { get; }
+        public string HttpVersion { get; }
         public NameValueCollection Headers { get; }
         public NameValueCollection FormData { get; }
-        public Stream Content { get; private set; }
+        public Stream Content { get; }
 
-        private RequestMessage(IPAddress ipAddress, string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData, Stream content)
+        private RequestMessage(string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData, Stream content)
         {
-            IpAddress = ipAddress;
             HttpMethod = httpMethod;
             Path = path;
             QueryString = queryString;
@@ -34,7 +31,7 @@ namespace SecureWebServer.Core.Request
             Content = content;
         }
 
-        public static RequestMessage Create(IPAddress ipAddress, Stream inputStream)
+        public static RequestMessage Create(Stream inputStream)
         {
             NameValueCollection headers = new NameValueCollection();
             NameValueCollection formData = new NameValueCollection();
@@ -59,7 +56,7 @@ namespace SecureWebServer.Core.Request
                         throw new RequestException(HttpStatusCode.BadRequest, "Request-Line malformed.");
 
                     httpMethod = requestLineParts[0].ToUpperInvariant();
-                    httpVersion = requestLineParts[2];
+                    httpVersion = requestLineParts[2].ToUpperInvariant();
 
                     string[] requestUriParts = requestLineParts[1].Trim('/').Split('?');
                     path = requestUriParts[0];
@@ -79,7 +76,7 @@ namespace SecureWebServer.Core.Request
 
             if (!readRequestLine)
                 return null;
-
+            
             // Read body if the Content-Length header is present
             // TODO: what if there is a body but no Content-Length header?
 
@@ -101,7 +98,7 @@ namespace SecureWebServer.Core.Request
                 ParseFormData(headers, formData, content);
             }
 
-            return new RequestMessage(ipAddress, httpMethod, path, queryString, httpVersion, headers, formData, content);
+            return new RequestMessage(httpMethod, path, queryString, httpVersion, headers, formData, content);
         }
 
         /// <summary>
@@ -193,6 +190,48 @@ namespace SecureWebServer.Core.Request
                     }
                 }
             }
+        }
+
+        public string ToString(bool verbose)
+        {
+            StringBuilder builder = new StringBuilder();
+
+            // Append Request-Line
+            builder.AppendFormat("{0} /{1}", HttpMethod, Path);
+            if (!string.IsNullOrEmpty(QueryString))
+                builder.AppendFormat("?{0}", QueryString);
+            builder.AppendFormat(" {0}", HttpVersion);
+
+            if (!verbose)
+                return builder.ToString();
+
+            // Append headers
+            foreach (string headerName in Headers.Keys)
+            {
+                string[] headerValues = Headers.GetValues(headerName);
+                string headerValuesString = headerValues != null
+                    ? string.Join(";", headerValues)
+                    : string.Empty;
+                builder.AppendFormat("\r\n{0}: {1}", headerName, headerValuesString);
+            }
+
+            // Append body (assume ASCII)
+            if (Content?.Length > 0)
+            {
+                builder.Append("\r\n\r\n");
+
+                Content.Position = 0;
+                using (StreamReader reader = new StreamReader(Content, Encoding.ASCII, false, 1024, true))
+                    builder.Append(reader.ReadToEnd());
+                Content.Position = 0;
+            }
+
+            return builder.ToString();
+        }
+
+        public override string ToString()
+        {
+            return ToString(true);
         }
     }
 }

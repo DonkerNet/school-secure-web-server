@@ -87,10 +87,32 @@ namespace SecureWebServer.Service
         {
             ServerConfiguration config = ServerConfiguration.Get();
 
+            ResponseMessage response;
+
             if (request.HttpMethod == "POST")
             {
+                int previousPort = config.WebPort;
+
                 config.SetValues(request.FormData);
                 config.Save();
+
+                // If the port was changed and the host+port was specified in the headers, redirect to the new URL
+                if (previousPort != config.WebPort)
+                {
+                    string host = request.Headers["Host"];
+
+                    if (!string.IsNullOrEmpty(host))
+                    {
+                        string[] hostParts = host.Split(new[] {':'}, 2);
+
+                        if (hostParts.Length > 1 && hostParts[1] == previousPort.ToString())
+                        {
+                            response = new ResponseMessage(HttpStatusCode.Redirect);
+                            response.Headers["Location"] = $"http://{hostParts[0]}:{config.WebPort}/{request.Path}";
+                            return response;
+                        }
+                    }
+                }
             }
 
             string htmlTemplate;
@@ -104,7 +126,7 @@ namespace SecureWebServer.Service
             htmlBuilder.Replace("{DefaultPages}", config.DefaultPages != null ? string.Join(";", config.DefaultPages) : string.Empty);
             htmlBuilder.Replace("{DirectoryBrowsing}", config.DirectoryBrowsing ? "checked='checked'" : string.Empty);
 
-            ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
+            response = new ResponseMessage(HttpStatusCode.OK);
             response.SetStringContent(htmlBuilder.ToString(), "text/html");
             return response;
         }

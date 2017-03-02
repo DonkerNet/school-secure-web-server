@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using log4net;
 using SecureWebServer.Core.Error;
 using SecureWebServer.Core.Response;
 
@@ -9,6 +10,7 @@ namespace SecureWebServer.Core.Request
 {
     public class RequestListener
     {
+        private readonly ILog _log;
         private readonly IRequestHandler _requestHandler;
         private readonly IErrorHandler _errorHandler;
         private Socket _listenerSocket;
@@ -16,6 +18,7 @@ namespace SecureWebServer.Core.Request
 
         public RequestListener(IRequestHandler requestHandler, IErrorHandler errorHandler)
         {
+            _log = LogManager.GetLogger(GetType());
             _requestHandler = requestHandler;
             _errorHandler = errorHandler;
             _state = State.Stopped;
@@ -57,7 +60,11 @@ namespace SecureWebServer.Core.Request
                     throw;
                 }
 
-                Thread requestThread = new Thread(OnRequest);
+                Thread requestThread = new Thread(OnRequest)
+                {
+                    Name = Guid.NewGuid().ToString()
+                };
+
                 requestThread.Start(clientSocket);
             }
 
@@ -66,8 +73,6 @@ namespace SecureWebServer.Core.Request
 
         private void OnRequest(object clientSocketObj)
         {
-            // TODO: close->open socket to read body???
-
             using (Socket clientSocket = (Socket)clientSocketObj)
             {
                 IPEndPoint endPoint = (IPEndPoint)clientSocket.RemoteEndPoint;
@@ -78,12 +83,11 @@ namespace SecureWebServer.Core.Request
 
                     try
                     {
-                        RequestMessage request = RequestMessage.Create(endPoint.Address, networkStream);
+                        RequestMessage request = RequestMessage.Create(networkStream);
 
                         if (request != null)
                         {
-                            // TODO: log request
-
+                            _log.InfoFormat("Received request from {0}:{1}.\r\n{2}", endPoint.Address, endPoint.Port, request.ToString(_log.IsDebugEnabled));
                             response = _requestHandler.Handle(request) ?? new ResponseMessage(HttpStatusCode.OK);
                         }
                     }
@@ -94,8 +98,7 @@ namespace SecureWebServer.Core.Request
 
                     if (response != null)
                     {
-                        // TODO: log response
-
+                        _log.InfoFormat("Sending response to {0}:{1}.\r\n{2}", endPoint.Address, endPoint.Port, response.ToString(_log.IsDebugEnabled));
                         response.WriteToStream(networkStream);
                     }
                 }

@@ -9,12 +9,14 @@ namespace SecureWebServer.Core.Response
 {
     public class ResponseMessage
     {
+        public string HttpVersion { get; }
         public HttpStatusCode StatusCode { get; }
         public NameValueCollection Headers { get; }
         public Stream Content { get; private set; }
 
         public ResponseMessage(HttpStatusCode statusCode)
         {
+            HttpVersion = "HTTP/1.0";
             StatusCode = statusCode;
             Headers = new NameValueCollection();
             Content = new MemoryStream();
@@ -79,7 +81,7 @@ namespace SecureWebServer.Core.Response
             using (StreamWriter writer = new StreamWriter(outputStream, Encoding.ASCII, 1024, true))
             {
                 // Write the Status-Line to the stream
-                writer.WriteLine("HTTP/1.0 {0} {1}", (int)StatusCode, GetStatusDescription());
+                writer.WriteLine("{0} {1} {2}", HttpVersion, (int)StatusCode, GetStatusDescription());
 
                 // Write all the headers to the stream
                 foreach (string headerName in Headers.Keys)
@@ -152,6 +154,45 @@ namespace SecureWebServer.Core.Response
             }
 
             return descriptionBuilder.ToString();
+        }
+
+        public string ToString(bool verbose)
+        {
+            StringBuilder builder = new StringBuilder();
+
+            // Append Status-Line
+            builder.AppendFormat("{0} {1} {2}", HttpVersion, (int)StatusCode, GetStatusDescription());
+
+            if (!verbose)
+                return builder.ToString();
+
+            // Append headers
+            foreach (string headerName in Headers.Keys)
+            {
+                string[] headerValues = Headers.GetValues(headerName);
+                string headerValuesString = headerValues != null
+                    ? string.Join(";", headerValues)
+                    : string.Empty;
+                builder.AppendFormat("\r\n{0}: {1}", headerName, headerValuesString);
+            }
+
+            // Append body (assume ASCII)
+            if (Content?.Length > 0)
+            {
+                builder.Append("\r\n\r\n");
+
+                Content.Position = 0;
+                using (StreamReader reader = new StreamReader(Content, Encoding.ASCII, false, 1024, true))
+                    builder.Append(reader.ReadToEnd());
+                Content.Position = 0;
+            }
+
+            return builder.ToString();
+        }
+
+        public override string ToString()
+        {
+            return ToString(true);
         }
     }
 }

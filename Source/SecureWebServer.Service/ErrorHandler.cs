@@ -1,19 +1,25 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using log4net;
 using SecureWebServer.Core.Error;
-using SecureWebServer.Core.Helpers;
 using SecureWebServer.Core.Request;
 using SecureWebServer.Core.Response;
-using SecureWebServer.Service.Config;
 
 namespace SecureWebServer.Service
 {
     public class ErrorHandler : IErrorHandler
     {
+        private readonly ILog _log;
+
+        public ErrorHandler()
+        {
+            _log = LogManager.GetLogger(GetType());
+        }
+
         public ResponseMessage Handle(Exception exception)
         {
-            // TODO: log exception
+            _log.Error(exception);
 
             RequestException requestException = exception as RequestException;
 
@@ -22,9 +28,7 @@ namespace SecureWebServer.Service
 
             ResponseMessage response = new ResponseMessage(requestException.StatusCode);
 
-            ServerConfiguration config = ServerConfiguration.Get();
-
-            string errorPagePath = PathHelper.Combine(config.WebRoot, $"ErrorPages\\{(int)requestException.StatusCode}.html");
+            string errorPagePath = $"ErrorPages\\{(int)requestException.StatusCode}.html";
 
             if (File.Exists(errorPagePath))
             {
