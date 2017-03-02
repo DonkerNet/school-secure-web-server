@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureWebServer.Service", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureWebServer.Core", "SecureWebServer.Core\SecureWebServer.Core.csproj", "{0BA0DFDD-6BE2-44FB-8578-4F2503306054}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureWebServer.DataAccess", "SecureWebServer.DataAccess\SecureWebServer.DataAccess.csproj", "{BD79A77C-B3B5-413C-A426-8639CD30CD53}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{0BA0DFDD-6BE2-44FB-8578-4F2503306054}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0BA0DFDD-6BE2-44FB-8578-4F2503306054}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0BA0DFDD-6BE2-44FB-8578-4F2503306054}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD79A77C-B3B5-413C-A426-8639CD30CD53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD79A77C-B3B5-413C-A426-8639CD30CD53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD79A77C-B3B5-413C-A426-8639CD30CD53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD79A77C-B3B5-413C-A426-8639CD30CD53}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -6,22 +6,22 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Web;
+using SecureWebServer.Core.Entities;
 using SecureWebServer.Core.Extensions;
 
 namespace SecureWebServer.Core.Request
 {
     public class RequestMessage
     {
-        private Stream _content;
-
         public string HttpMethod { get; }
         public string Path { get; }
         public string QueryString { get; }
         public string HttpVersion { get; }
         public NameValueCollection Headers { get; }
         public NameValueCollection FormData { get; }
+        public User User { get; } // TODO
 
-        private RequestMessage(string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData, Stream content)
+        private RequestMessage(string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData)
         {
             HttpMethod = httpMethod;
             Path = path;
@@ -29,7 +29,6 @@ namespace SecureWebServer.Core.Request
             HttpVersion = httpVersion;
             Headers = headers;
             FormData = formData;
-            _content = content;
         }
 
         public static RequestMessage Create(Stream inputStream)
@@ -99,7 +98,7 @@ namespace SecureWebServer.Core.Request
                 ParseFormData(headers, formData, content);
             }
 
-            return new RequestMessage(httpMethod, path, queryString, httpVersion, headers, formData, content);
+            return new RequestMessage(httpMethod, path, queryString, httpVersion, headers, formData);
         }
 
         /// <summary>

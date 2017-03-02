@@ -57,6 +57,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RequestHandler.cs" />
     <Compile Include="ErrorHandler.cs" />
+    <Compile Include="Security\SecurityProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -90,6 +91,10 @@
     <ProjectReference Include="..\SecureWebServer.Core\SecureWebServer.Core.csproj">
       <Project>{0BA0DFDD-6BE2-44FB-8578-4F2503306054}</Project>
       <Name>SecureWebServer.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SecureWebServer.DataAccess\SecureWebServer.DataAccess.csproj">
+      <Project>{BD79A77C-B3B5-413C-A426-8639CD30CD53}</Project>
+      <Name>SecureWebServer.DataAccess</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

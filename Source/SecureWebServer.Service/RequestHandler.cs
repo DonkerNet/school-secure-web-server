@@ -81,6 +81,10 @@ namespace SecureWebServer.Service
                     response = HandleLogFileRequest(request, fileInfo);
                     break;
 
+                case "login.html":
+                    response = HandleLoginRequest(request, fileInfo);
+                    break;
+
                 default:
                     response = HandleDefaultFileRequest(fileInfo);
                     break;
@@ -200,6 +204,11 @@ namespace SecureWebServer.Service
             ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
             response.SetStringContent(htmlTemplate, Encoding.ASCII, "text/html");
             return response;
+        }
+
+        private ResponseMessage HandleLoginRequest(RequestMessage request, FileInfo fileInfo)
+        {
+            return new ResponseMessage(HttpStatusCode.NotFound); // TODO: implement this
         }
 
         private ResponseMessage HandleDefaultFileRequest(FileInfo fileInfo)
