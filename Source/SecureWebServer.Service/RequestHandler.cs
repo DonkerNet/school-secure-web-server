@@ -3,6 +3,8 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Web;
+using log4net;
+using log4net.Appender;
 using SecureWebServer.Core.Extensions;
 using SecureWebServer.Core.Helpers;
 using SecureWebServer.Core.Request;
@@ -75,6 +77,10 @@ namespace SecureWebServer.Service
                     response = HandleConfigFileRequest(request, fileInfo);
                     break;
 
+                case "log.html":
+                    response = HandleLogFileRequest(request, fileInfo);
+                    break;
+
                 default:
                     response = HandleDefaultFileRequest(fileInfo);
                     break;
@@ -85,6 +91,8 @@ namespace SecureWebServer.Service
 
         private ResponseMessage HandleConfigFileRequest(RequestMessage request, FileInfo fileInfo)
         {
+            // This method handles GET and POST requests for the configuration page
+
             ServerConfiguration config = ServerConfiguration.Get();
 
             ResponseMessage response;
@@ -128,6 +136,69 @@ namespace SecureWebServer.Service
 
             response = new ResponseMessage(HttpStatusCode.OK);
             response.SetStringContent(htmlBuilder.ToString(), "text/html");
+            return response;
+        }
+
+        private ResponseMessage HandleLogFileRequest(RequestMessage request, FileInfo fileInfo)
+        {
+            // This method reads the log that log4net is currently writing to
+
+            RollingFileAppender logAppender = LogManager
+                .GetRepository()
+                .GetAppenders()
+                .OfType<RollingFileAppender>()
+                .FirstOrDefault();
+
+            string logHtml;
+
+            if (logAppender == null || !File.Exists(logAppender.File))
+            {
+                logHtml = "No log file found.";
+            }
+            else
+            {
+                if (request.HttpMethod == "POST" && !string.IsNullOrEmpty(request.FormData["ClearLog"]))
+                {
+                    // Clear the log content if requested
+
+                    using (Stream logStream = File.OpenWrite(logAppender.File))
+                    {
+                        logStream.SetLength(0L);
+                        logStream.Flush();
+                    }
+
+                    logHtml = "Log cleared!";
+                }
+                else
+                {
+                    // Convert the log lines to HTML
+
+                    StringBuilder logHtmlBuilder = new StringBuilder();
+
+                    using (StreamReader reader = new StreamReader(logAppender.File))
+                    {
+                        string logLine;
+
+                        while ((logLine = reader.ReadLine()) != null)
+                        {
+                            logHtmlBuilder.Append(logLine.Replace(" ", "&nbsp;"));
+                            logHtmlBuilder.AppendLine("<br/>");
+                        }
+                    }
+
+                    logHtml = logHtmlBuilder.ToString();
+                }
+            }
+
+            string htmlTemplate;
+
+            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
+                htmlTemplate = reader.ReadToEnd();
+
+            htmlTemplate = htmlTemplate.Replace("{LogEntries}", logHtml);
+
+            ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
+            response.SetStringContent(htmlTemplate, "text/html");
             return response;
         }
 
