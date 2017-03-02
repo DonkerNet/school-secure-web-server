@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using log4net;
 using SecureWebServer.Core.Error;
 using SecureWebServer.Core.Request;
@@ -31,17 +32,10 @@ namespace SecureWebServer.Service
             string errorPagePath = $"ErrorPages\\{(int)requestException.StatusCode}.html";
 
             if (File.Exists(errorPagePath))
-            {
-                using (Stream fileStream = File.OpenRead(errorPagePath))
-                    fileStream.CopyTo(response.Content);
-
-                response.Headers["Content-Type"] = "text/html";
-            }
+                response.SetContentStream(File.OpenRead(errorPagePath), "text/html");
             else
-            {
-                response.SetStringContent(requestException.Message);
-            }
-            
+                response.SetStringContent(requestException.Message, Encoding.ASCII, "text/plain");
+
             return response;
         }
     }

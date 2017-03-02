@@ -135,7 +135,7 @@ namespace SecureWebServer.Service
             htmlBuilder.Replace("{DirectoryBrowsing}", config.DirectoryBrowsing ? "checked='checked'" : string.Empty);
 
             response = new ResponseMessage(HttpStatusCode.OK);
-            response.SetStringContent(htmlBuilder.ToString(), "text/html");
+            response.SetStringContent(htmlBuilder.ToString(), Encoding.ASCII, "text/html");
             return response;
         }
 
@@ -198,7 +198,7 @@ namespace SecureWebServer.Service
             htmlTemplate = htmlTemplate.Replace("{LogEntries}", logHtml);
 
             ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
-            response.SetStringContent(htmlTemplate, "text/html");
+            response.SetStringContent(htmlTemplate, Encoding.ASCII, "text/html");
             return response;
         }
 
@@ -206,10 +206,11 @@ namespace SecureWebServer.Service
         {
             ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
 
-            using (Stream fileStream = fileInfo.OpenRead())
-                fileStream.CopyTo(response.Content);
+            // Could be any file of any size, so simply set the stream instead of copying it
 
-            response.Headers["Content-Type"] = MimeMapping.GetMimeMapping(fileInfo.ToString());
+            response.SetContentStream(
+                fileInfo.OpenRead(),
+                MimeMapping.GetMimeMapping(fileInfo.ToString()));
 
             return response;
         }

@@ -9,38 +9,38 @@ namespace SecureWebServer.Core.Response
 {
     public class ResponseMessage
     {
+        private Stream _content;
+
         public string HttpVersion { get; }
         public HttpStatusCode StatusCode { get; }
         public NameValueCollection Headers { get; }
-        public Stream Content { get; private set; }
-
+        
         public ResponseMessage(HttpStatusCode statusCode)
         {
             HttpVersion = "HTTP/1.0";
             StatusCode = statusCode;
             Headers = new NameValueCollection();
-            Content = new MemoryStream();
         }
 
         #region Content methods
 
-        public void SetByteContent(byte[] content, string contentType)
+        public void SetContentStream(Stream contentStream, string contentType)
         {
-            MemoryStream newContentStream = new MemoryStream();
-
-            if (content != null && content.Length > 0)
-                newContentStream.Write(content, 0, content.Length);
-
-            Content.Dispose();
-            Content = newContentStream;
+            _content?.Dispose();
+            _content = contentStream;
 
             if (!string.IsNullOrEmpty(contentType))
                 Headers["Content-Type"] = contentType;
         }
 
-        public void SetByteContent(byte[] content)
+        public void SetByteContent(byte[] content, string contentType)
         {
-            SetByteContent(content, "application/octet-stream");
+            MemoryStream contentStream = new MemoryStream();
+
+            if (content != null && content.Length > 0)
+                contentStream.Write(content, 0, content.Length);
+
+            SetContentStream(contentStream, contentType);
         }
 
         public void SetStringContent(string content, Encoding encoding, string contentType)
@@ -56,21 +56,6 @@ namespace SecureWebServer.Core.Response
             }
 
             SetByteContent(buffer, contentType);
-        }
-
-        public void SetStringContent(string content, Encoding encoding)
-        {
-            SetStringContent(content, encoding, "text/plain");
-        }
-
-        public void SetStringContent(string content, string contentType)
-        {
-            SetStringContent(content, null, contentType);
-        }
-
-        public void SetStringContent(string content)
-        {
-            SetStringContent(content, null, "text/plain");
         }
 
         #endregion
@@ -104,8 +89,8 @@ namespace SecureWebServer.Core.Response
                 }
 
                 // Write the Content-Length and Connection headers
-                if (Content.Length > 0)
-                    writer.WriteLine("Content-Length: {0}", Content.Length);
+                if (_content?.Length > 0)
+                    writer.WriteLine("Content-Length: {0}", _content.Length);
 
                 writer.WriteLine("Connection: close");
 
@@ -116,10 +101,10 @@ namespace SecureWebServer.Core.Response
             }
 
             // Finally, write the body
-            if (Content.Length > 0)
+            if (_content?.Length > 0)
             {
-                Content.Position = 0;
-                Content.CopyTo(outputStream, 0, Content.Length);
+                _content.Position = 0;
+                _content.CopyTo(outputStream, 0, _content.Length);
             }
         }
 
@@ -174,17 +159,6 @@ namespace SecureWebServer.Core.Response
                     ? string.Join(";", headerValues)
                     : string.Empty;
                 builder.AppendFormat("\r\n{0}: {1}", headerName, headerValuesString);
-            }
-
-            // Append body (assume ASCII)
-            if (Content?.Length > 0)
-            {
-                builder.Append("\r\n\r\n");
-
-                Content.Position = 0;
-                using (StreamReader reader = new StreamReader(Content, Encoding.ASCII, false, 1024, true))
-                    builder.Append(reader.ReadToEnd());
-                Content.Position = 0;
             }
 
             return builder.ToString();

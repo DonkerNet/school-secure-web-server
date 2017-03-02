@@ -12,13 +12,14 @@ namespace SecureWebServer.Core.Request
 {
     public class RequestMessage
     {
+        private Stream _content;
+
         public string HttpMethod { get; }
         public string Path { get; }
         public string QueryString { get; }
         public string HttpVersion { get; }
         public NameValueCollection Headers { get; }
         public NameValueCollection FormData { get; }
-        public Stream Content { get; }
 
         private RequestMessage(string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData, Stream content)
         {
@@ -28,7 +29,7 @@ namespace SecureWebServer.Core.Request
             HttpVersion = httpVersion;
             Headers = headers;
             FormData = formData;
-            Content = content;
+            _content = content;
         }
 
         public static RequestMessage Create(Stream inputStream)
@@ -213,17 +214,6 @@ namespace SecureWebServer.Core.Request
                     ? string.Join(";", headerValues)
                     : string.Empty;
                 builder.AppendFormat("\r\n{0}: {1}", headerName, headerValuesString);
-            }
-
-            // Append body (assume ASCII)
-            if (Content?.Length > 0)
-            {
-                builder.Append("\r\n\r\n");
-
-                Content.Position = 0;
-                using (StreamReader reader = new StreamReader(Content, Encoding.ASCII, false, 1024, true))
-                    builder.Append(reader.ReadToEnd());
-                Content.Position = 0;
             }
 
             return builder.ToString();
