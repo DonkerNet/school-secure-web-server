@@ -64,8 +64,42 @@ namespace SecureWebServer.Service
         /// </summary>
         private ResponseMessage HandleDirectoryBrowseRequest(RequestMessage request, FileInfo fileInfo)
         {
-            return new ResponseMessage(HttpStatusCode.Forbidden); // TODO: directory listing
+            ServerConfiguration config = ServerConfiguration.Get();
+
+            if(config.DirectoryBrowsing == false)
+                throw new RequestException(HttpStatusCode.Forbidden,"Directory listing not allowed.");
+
+            ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
+
+            DirectoryInfo info = new DirectoryInfo(fileInfo.FullName);
+
+            string html = $"<html><head><title>Directory listing: { info.Name}</title></head><body><h1>Directory listing: { info.Name}</h1><br/>";
+
+
+            if (info.Parent != null && info.Parent.Name == config.WebRoot == false)
+            {
+                if(request.Path.Contains("/"))
+                html = html + $"<b><a href=\"/{request.Path.Substring(0,request.Path.LastIndexOf('/'))}\">..</a></b><br/>";
+            }
+            
+
+
+            foreach (var file in info.GetDirectories())
+            {
+                html = html + $"<b><a href=\"{info.Name}/{file.Name}\">{file.Name}</a><br/></b>";
+            }
+
+            foreach (var file in info.GetFiles())
+            {
+                html = html + $"<b><a href=\"{info.Name}/{file.Name}\">{file.Name}</a><br/></b>";
+            }
+
+            html = html + "</html></body>";
+            response.SetStringContent(html,Encoding.ASCII,"text/html");
+            return response;
         }
+
+
 
         private ResponseMessage HandleFileRequest(RequestMessage request, FileInfo fileInfo)
         {

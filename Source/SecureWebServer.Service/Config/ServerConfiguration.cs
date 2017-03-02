@@ -63,6 +63,8 @@ namespace SecureWebServer.Service.Config
         /// </summary>
         public void SetValues(NameValueCollection values)
         {
+            DirectoryBrowsing = false;
+
             foreach (string key in values.Keys)
             {
                 switch (key)
