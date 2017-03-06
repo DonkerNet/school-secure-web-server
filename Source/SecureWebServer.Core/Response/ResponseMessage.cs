@@ -141,14 +141,14 @@ namespace SecureWebServer.Core.Response
             return descriptionBuilder.ToString();
         }
 
-        public string ToString(bool verbose)
+        public string ToString(bool includeHeaders)
         {
             StringBuilder builder = new StringBuilder();
 
             // Append Status-Line
             builder.AppendFormat("{0} {1} {2}", HttpVersion, (int)StatusCode, GetStatusDescription());
 
-            if (!verbose)
+            if (!includeHeaders)
                 return builder.ToString();
 
             // Append headers

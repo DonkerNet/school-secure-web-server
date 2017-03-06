@@ -1,17 +1,13 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 
 namespace SecureWebServer.Core.Entities
 {
     public class User
     {
-        public string Name { get; }
-        public string[] Roles { get; }
-
-        public User(string name, IEnumerable<string> roles)
-        {
-            Name = name;
-            Roles = roles?.ToArray() ?? new string[0];
-        }
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public string PasswordHash { get; set; }
+        public string PasswordSalt { get; set; }
+        public string[] Roles { get; set; }
     }
 }

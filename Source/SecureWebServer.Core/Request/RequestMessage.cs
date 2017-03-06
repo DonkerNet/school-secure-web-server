@@ -15,13 +15,13 @@ namespace SecureWebServer.Core.Request
     {
         public string HttpMethod { get; }
         public string Path { get; }
-        public string QueryString { get; }
+        public NameValueCollection QueryString { get; }
         public string HttpVersion { get; }
         public NameValueCollection Headers { get; }
         public NameValueCollection FormData { get; }
         public User User { get; } // TODO
 
-        private RequestMessage(string httpMethod, string path, string queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData)
+        private RequestMessage(string httpMethod, string path, NameValueCollection queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData)
         {
             HttpMethod = httpMethod;
             Path = path;
@@ -34,10 +34,10 @@ namespace SecureWebServer.Core.Request
         public static RequestMessage Create(Stream inputStream)
         {
             NameValueCollection headers = new NameValueCollection();
+            NameValueCollection queryString = new NameValueCollection();
             NameValueCollection formData = new NameValueCollection();
             string httpMethod = null;
             string path = null;
-            string queryString = null;
             string httpVersion = null;
             Stream content = null;
 
@@ -60,7 +60,9 @@ namespace SecureWebServer.Core.Request
 
                     string[] requestUriParts = requestLineParts[1].Trim('/').Split('?');
                     path = requestUriParts[0];
-                    queryString = requestUriParts.Length > 1 ? requestUriParts[1] : string.Empty;
+
+                    if (requestUriParts.Length > 1)
+                        ParseQueryString(queryString, requestUriParts[1]);
 
                     readRequestLine = true;
                     continue;
@@ -147,6 +149,17 @@ namespace SecureWebServer.Core.Request
             }
         }
 
+        private static void ParseQueryString(NameValueCollection queryStringCollection, string queryString)
+        {
+            foreach (string field in queryString.Split(new []{ '&' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] fieldParts = field.Split('=');
+                string fieldName = fieldParts[0];
+                string fieldValue = fieldParts.Length > 1 ? HttpUtility.UrlDecode(fieldParts[1]) : string.Empty;
+                queryStringCollection.Add(fieldName, fieldValue);
+            }
+        }
+
         /// <summary>
         /// Checks if the request has a body containg form data, parses and places it into the form data collection.
         /// </summary>
@@ -192,17 +205,38 @@ namespace SecureWebServer.Core.Request
             }
         }
 
-        public string ToString(bool verbose)
+        public string ToString(bool includeHeaders)
         {
             StringBuilder builder = new StringBuilder();
 
             // Append Request-Line
             builder.AppendFormat("{0} /{1}", HttpMethod, Path);
-            if (!string.IsNullOrEmpty(QueryString))
-                builder.AppendFormat("?{0}", QueryString);
+
+            if (QueryString.Count > 0)
+            {
+                builder.Append('?');
+
+                int fieldCount = 0;
+
+                foreach (string fieldName in QueryString.Keys)
+                {
+                    if (fieldCount > 0)
+                        builder.Append('&');
+
+                    string[] fieldValues = QueryString.GetValues(fieldName);
+
+                    if (fieldValues != null && fieldValues.Length > 0)
+                        builder.AppendFormat("{0}={1}", fieldName, string.Join(",", fieldValues.Select(HttpUtility.UrlEncode)));
+                    else
+                        builder.Append(fieldName);
+
+                    ++fieldCount;
+                }
+            }
+
             builder.AppendFormat(" {0}", HttpVersion);
 
-            if (!verbose)
+            if (!includeHeaders)
                 return builder.ToString();
 
             // Append headers
