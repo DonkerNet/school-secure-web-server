@@ -124,6 +124,8 @@ namespace SecureWebServer.Service
                     break;
             }
 
+            response.Headers.Add("Content-Security-Policy", "default-src 'self';");
+
             return response;
         }
 
