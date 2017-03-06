@@ -1,24 +1,32 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Web;
 using log4net;
 using log4net.Appender;
+using SecureWebServer.Core.Entities;
 using SecureWebServer.Core.Extensions;
 using SecureWebServer.Core.Helpers;
 using SecureWebServer.Core.Request;
 using SecureWebServer.Core.Response;
+using SecureWebServer.DataAccess.Repositories;
 using SecureWebServer.Service.Config;
+using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service
 {
     public class RequestHandler : IRequestHandler
     {
+        private readonly UserRepository _userRepository;
+        private readonly SecurityProvider _securityProvider;
         private readonly string[] _allowedMethods;
 
         public RequestHandler()
         {
+            _userRepository = new UserRepository();
+            _securityProvider = new SecurityProvider(_userRepository);
             _allowedMethods = new[] { "GET", "POST" };
         }
 
@@ -41,6 +49,11 @@ namespace SecureWebServer.Service
 
             if (!fileInfo.Exists && !isDirectory)
                 throw new RequestException(HttpStatusCode.NotFound, "The specified resource was not found.");
+
+            User user = _securityProvider.GetUserForRequest(request);
+            
+            if (!_securityProvider.UserIsInRole(request.Path, request.HttpMethod, user))
+                throw new RequestException(HttpStatusCode.Forbidden, "Go away!");
 
             return isDirectory
                 ? HandleDirectoryBrowseRequest(request, fileInfo)
@@ -117,6 +130,10 @@ namespace SecureWebServer.Service
 
                 case "login.html":
                     response = HandleLoginRequest(request, fileInfo);
+                    break;
+
+                case "user/edit.html":
+                    response = HandleUserEditRequest(request, fileInfo);
                     break;
 
                 default:
@@ -247,7 +264,82 @@ namespace SecureWebServer.Service
 
         private ResponseMessage HandleLoginRequest(RequestMessage request, FileInfo fileInfo)
         {
-            return new ResponseMessage(HttpStatusCode.NotFound); // TODO: implement this
+            ResponseMessage response;
+
+            if (request.HttpMethod == "POST")
+            {
+                string username = request.FormData["Username"];
+                string password = request.FormData["Password"];
+
+                response = new ResponseMessage(HttpStatusCode.Redirect);
+                response.Headers["Location"] = "/";
+
+                if (!_securityProvider.AuthenticateUser(username, password, response))
+                    throw new RequestException(HttpStatusCode.Unauthorized, "Invalid credentials.");
+
+                return response;
+            }
+
+            string html;
+
+            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
+                html = reader.ReadToEnd();
+
+            response = new ResponseMessage(HttpStatusCode.OK);
+            response.SetStringContent(html, Encoding.ASCII, "text/html");
+            return response;
+        }
+
+        private ResponseMessage HandleUserEditRequest(RequestMessage request, FileInfo fileInfo)
+        {
+            Guid userId;
+
+            string userIdString = request.HttpMethod == "GET"
+                ? request.QueryString["id"]
+                : request.FormData["UserId"];
+
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out userId))
+                throw new RequestException(HttpStatusCode.BadRequest, "Invalid user ID.");
+            
+            User user = _userRepository.GetById(userId);
+
+            if (user == null)
+                throw new RequestException(HttpStatusCode.NotFound, "User not found.");
+
+            if (request.HttpMethod == "POST")
+            {
+                string[] roles = request.FormData.GetValues("Role") ?? new string[0];
+
+                if (!roles.Any(_securityProvider.RoleExists))
+                    throw new RequestException(HttpStatusCode.BadRequest, "Invalid roles.");
+
+                user.Roles = roles;
+
+                _userRepository.Update(user);
+            }
+
+            string html;
+
+            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
+                html = reader.ReadToEnd();
+
+            StringBuilder rolesHtmlBuilder = new StringBuilder();
+
+            foreach (string role in SecurityProvider.Roles)
+            {
+                rolesHtmlBuilder.AppendFormat("<label><input type=\"checkbox\" name=\"Role\" value=\"{0}\"{1} /> {0}</label><br/>\r\n",
+                    role,
+                    user.Roles.Contains(role, StringComparer.OrdinalIgnoreCase) ? " checked=\"checked\"" : string.Empty);
+            }
+
+            html = html
+                .Replace("{UserId}", user.Id.ToString())
+                .Replace("{Username}", user.Name)
+                .Replace("{Roles}", rolesHtmlBuilder.ToString());
+
+            ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
+            response.SetStringContent(html, Encoding.UTF8, "text/html");
+            return response;
         }
 
         private ResponseMessage HandleDefaultFileRequest(FileInfo fileInfo)

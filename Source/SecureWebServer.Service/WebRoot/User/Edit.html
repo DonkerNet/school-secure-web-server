@@ -1,0 +1,19 @@
+<html>
+<head>
+    <title>SecureWebServer - Edit user</title>
+</head>
+<body>
+    <h1>Edit user</h1>
+
+    <form method="POST" action="Edit.html?id={UserId}">
+        <input type="hidden" name="UserId" value="{UserId}" />
+        <label>
+            Username:
+            <input type="text" value="{Username}" readonly="readonly"/>
+        </label>
+        {Roles}
+        <input type="submit" name="Login" value="Save"/>
+    </form>
+
+</body>
+</html>

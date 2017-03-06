@@ -1,0 +1,7 @@
+﻿Test users:
+
+Name:		wdonker
+Password:	Kart0ffel
+
+Name:		admin
+Password:	0beyMe

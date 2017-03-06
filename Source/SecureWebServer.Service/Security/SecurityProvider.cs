@@ -1,32 +1,69 @@
-﻿using System.Collections.Specialized;
+﻿using System;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Linq;
+using System.Runtime.Caching;
+using System.Security.Cryptography;
+using System.Text;
 using SecureWebServer.Core.Entities;
+using SecureWebServer.Core.Request;
+using SecureWebServer.Core.Response;
+using SecureWebServer.DataAccess.Repositories;
 
 namespace SecureWebServer.Service.Security
 {
-    public static class SecurityProvider
+    public class SecurityProvider
     {
-        private static readonly NameValueCollection UserRoles;
+        public static string[] Roles { get; }
+
+        private readonly NameValueCollection _userRoles;
+        private readonly ObjectCache _sessionCache;
+        private readonly Encoding _hashEncoding;
+        private readonly HashAlgorithm _hashAlgorithm;
+        private readonly UserRepository _userRepository;
 
         static SecurityProvider()
         {
-            UserRoles = (NameValueCollection)ConfigurationManager.GetSection("userRoles");
+            Roles = new[]
+            {
+                "ondersteuners",
+                "beheerders"
+            };
         }
 
-        public static bool UserIsInRole(string path, string permission, User user)
+        public SecurityProvider(UserRepository userRepository)
         {
-            string roleString = UserRoles[path.ToLowerInvariant()];
+            _userRoles = (NameValueCollection)ConfigurationManager.GetSection("userRoles");
+            _sessionCache = MemoryCache.Default;
+            _hashEncoding = Encoding.UTF8;
+            _hashAlgorithm = HashAlgorithm.Create("SHA-512");
+            _userRepository = userRepository;
+        }
+
+        public bool RoleExists(string role)
+        {
+            if (string.IsNullOrEmpty(role))
+                return false;
+
+            return Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
+        }
+
+        public bool UserIsInRole(string path, string method, User user)
+        {
+            string roleString = _userRoles[path.ToLowerInvariant()];
 
             if (string.IsNullOrEmpty(roleString))
                 return true;
+
+            if (user == null)
+                return false;
 
             foreach (string[] roleParts in roleString.Split(';').Select(r => r.Split('=')))
             {
                 string roleName = roleParts[0];
                 string[] rolePermissions = roleParts[1].Split('|');
 
-                if (!rolePermissions.Contains(permission))
+                if (!rolePermissions.Contains(method))
                     continue;
 
                 if (user.Roles.Contains(roleName))
@@ -36,8 +73,57 @@ namespace SecureWebServer.Service.Security
             return false;
         }
 
-        // TODO: authenticate user
+        public bool AuthenticateUser(string username, string password, ResponseMessage response)
+        {
+            User user = _userRepository.GetByName(username);
 
-        // TODO: get authenticated user from (encrypted?) cookie
+            if (user != null)
+            {
+                string hash = CreatePasswordHash(username, password, user.PasswordSalt);
+
+                if (hash == user.PasswordHash)
+                {
+                    string sessionToken = Guid.NewGuid().ToString("N");
+                    _sessionCache.Set($"SessionUser_{sessionToken}", user, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMinutes(20D) });
+                    response.Headers["Set-Cookie"] = "sessionToken=" + sessionToken;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public User GetUserForRequest(RequestMessage request)
+        {
+            string cookieHeader = request.Headers["Cookie"];
+
+            if (string.IsNullOrEmpty(cookieHeader))
+                return null;
+
+            string sessionToken = null;
+
+            foreach (string[] cookie in cookieHeader.Split(';').Select(c => c.Split('=')))
+            {
+                if (string.Equals(cookie[0], "sessionToken"))
+                {
+                    sessionToken = cookie[1];
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(sessionToken))
+                return null;
+
+            return _sessionCache[$"SessionUser_{sessionToken}"] as User;
+        }
+
+        private string CreatePasswordHash(string username, string password, string salt)
+        {
+            string input = $"{username}|{password}|{salt}";
+            byte[] inputBytes = _hashEncoding.GetBytes(input);
+            byte[] hashBytes = _hashAlgorithm.ComputeHash(inputBytes);
+            return Convert.ToBase64String(hashBytes);
+        }
     }
 }
