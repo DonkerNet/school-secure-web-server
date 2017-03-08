@@ -85,7 +85,7 @@ namespace SecureWebServer.Service.Security
                 {
                     string sessionToken = Guid.NewGuid().ToString("N");
                     _sessionCache.Set($"SessionUser_{sessionToken}", user, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMinutes(20D) });
-                    response.Headers["Set-Cookie"] = "sessionToken=" + sessionToken;
+                    response.Headers["Set-Cookie"] = $"sessionToken={sessionToken}";
 
                     return true;
                 }
@@ -95,6 +95,37 @@ namespace SecureWebServer.Service.Security
         }
 
         public User GetUserForRequest(RequestMessage request)
+        {
+            string sessionToken = GetSessionTokenFromRequest(request);
+
+            if (sessionToken == null)
+                return null;
+
+            return _sessionCache[$"SessionUser_{sessionToken}"] as User;
+        }
+
+        public void LogoutUser(RequestMessage request, ResponseMessage response)
+        {
+            string sessionToken = GetSessionTokenFromRequest(request);
+
+            if (sessionToken != null)
+            {
+                _sessionCache.Remove(sessionToken);
+                response.Headers["Set-Cookie"] = "sessionToken=expired; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            }
+
+            request.User = null;
+        }
+
+        private string CreatePasswordHash(string username, string password, string salt)
+        {
+            string input = $"{username}|{password}|{salt}";
+            byte[] inputBytes = _hashEncoding.GetBytes(input);
+            byte[] hashBytes = _hashAlgorithm.ComputeHash(inputBytes);
+            return Convert.ToBase64String(hashBytes);
+        }
+
+        private string GetSessionTokenFromRequest(RequestMessage request)
         {
             string cookieHeader = request.Headers["Cookie"];
 
@@ -115,15 +146,7 @@ namespace SecureWebServer.Service.Security
             if (string.IsNullOrEmpty(sessionToken))
                 return null;
 
-            return _sessionCache[$"SessionUser_{sessionToken}"] as User;
-        }
-
-        private string CreatePasswordHash(string username, string password, string salt)
-        {
-            string input = $"{username}|{password}|{salt}";
-            byte[] inputBytes = _hashEncoding.GetBytes(input);
-            byte[] hashBytes = _hashAlgorithm.ComputeHash(inputBytes);
-            return Convert.ToBase64String(hashBytes);
+            return sessionToken;
         }
     }
 }

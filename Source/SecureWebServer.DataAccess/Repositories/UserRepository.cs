@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -13,6 +14,31 @@ namespace SecureWebServer.DataAccess.Repositories
         public UserRepository()
         {
             _connectionString = ConfigurationManager.ConnectionStrings["SecureWebServer"].ConnectionString;
+        }
+
+        public IList<User> GetAll()
+        {
+            List<User> users = new List<User>();
+
+            using (IDbConnection conn = OpenConnection())
+            {
+                using (IDbCommand cmd = CreateCommand(conn))
+                {
+                    cmd.CommandText = "SELECT Id, Name, PasswordHash, PasswordSalt, Roles FROM [User]";
+
+                    using (IDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            User user = new User();
+                            PopulateUser(reader, user);
+                            users.Add(user);
+                        }
+                    }
+                }
+            }
+
+            return users;
         }
 
         public User GetById(Guid id)
