@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -50,9 +51,9 @@ namespace SecureWebServer.Service
             if (!fileInfo.Exists && !isDirectory)
                 throw new RequestException(HttpStatusCode.NotFound, "The specified resource was not found.");
 
-            User user = _securityProvider.GetUserForRequest(request);
+            request.User = _securityProvider.GetUserForRequest(request);
             
-            if (!_securityProvider.UserIsInRole(request.Path, request.HttpMethod, user))
+            if (!_securityProvider.UserIsInRole(request.Path, request.HttpMethod, request.User))
                 throw new RequestException(HttpStatusCode.Forbidden, "Go away!");
 
             return isDirectory
@@ -120,16 +121,29 @@ namespace SecureWebServer.Service
 
             switch (request.Path.ToLowerInvariant())
             {
+                case "":
+                case "index.html":
+                    response = HandleIndexRequest(request, fileInfo);
+                    break;
+
                 case "config.html":
-                    response = HandleConfigFileRequest(request, fileInfo);
+                    response = HandleConfigRequest(request, fileInfo);
                     break;
 
                 case "log.html":
-                    response = HandleLogFileRequest(request, fileInfo);
+                    response = HandleLogRequest(request, fileInfo);
                     break;
 
                 case "login.html":
                     response = HandleLoginRequest(request, fileInfo);
+                    break;
+
+                case "logout.html":
+                    response = HandleLogoutRequest(request, fileInfo);
+                    break;
+
+                case "user/overview.html":
+                    response = HandleUserOverviewRequest(request, fileInfo);
                     break;
 
                 case "user/edit.html":
@@ -149,7 +163,34 @@ namespace SecureWebServer.Service
             return response;
         }
 
-        private ResponseMessage HandleConfigFileRequest(RequestMessage request, FileInfo fileInfo)
+        private ResponseMessage HandleIndexRequest(RequestMessage request, FileInfo fileInfo)
+        {
+            StringBuilder linkHtmlBuilder = new StringBuilder();
+
+            if (request.User == null)
+            {
+                linkHtmlBuilder.AppendLine("<li><a href=\"Login.html\">Login</a></li>");
+            }
+            else
+            {
+                if (_securityProvider.UserIsInRole("config.html", "GET", request.User))
+                    linkHtmlBuilder.AppendLine("<li><a href=\"Config.html\">Manage server configuration</a></li>");
+
+                if (_securityProvider.UserIsInRole("user/overview.html", "GET", request.User))
+                    linkHtmlBuilder.AppendLine("<li><a href=\"User/Overview.html\">Edit user permissions</a></li>");
+
+                linkHtmlBuilder.AppendLine("<li><a href=\"Logout.html\">Logout</a></li>");
+            }
+
+            string html = fileInfo.ReadFullString();
+            html = html.Replace("{Links}", linkHtmlBuilder.ToString());
+
+            ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
+            response.SetStringContent(html, Encoding.ASCII, "text/html");
+            return response;
+        }
+
+        private ResponseMessage HandleConfigRequest(RequestMessage request, FileInfo fileInfo)
         {
             // This method handles GET and POST requests for the configuration page
 
@@ -183,23 +224,23 @@ namespace SecureWebServer.Service
                 }
             }
 
-            string htmlTemplate;
+            string saveButtonHtml = _securityProvider.UserIsInRole(request.Path, "POST", request.User)
+                ? "<td><input type=\"submit\" value=\"Save\"></td>"
+                : string.Empty;
 
-            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
-                htmlTemplate = reader.ReadToEnd();
-
-            StringBuilder htmlBuilder = new StringBuilder(htmlTemplate);
+            StringBuilder htmlBuilder = new StringBuilder(fileInfo.ReadFullString());
             htmlBuilder.Replace("{WebPort}", config.WebPort.ToString());
             htmlBuilder.Replace("{WebRoot}", config.WebRoot);
             htmlBuilder.Replace("{DefaultPages}", config.DefaultPages != null ? string.Join(";", config.DefaultPages) : string.Empty);
             htmlBuilder.Replace("{DirectoryBrowsing}", config.DirectoryBrowsing ? "checked='checked'" : string.Empty);
+            htmlBuilder.Replace("{SaveButton}", saveButtonHtml);
 
             response = new ResponseMessage(HttpStatusCode.OK);
             response.SetStringContent(htmlBuilder.ToString(), Encoding.ASCII, "text/html");
             return response;
         }
 
-        private ResponseMessage HandleLogFileRequest(RequestMessage request, FileInfo fileInfo)
+        private ResponseMessage HandleLogRequest(RequestMessage request, FileInfo fileInfo)
         {
             // This method reads the log that log4net is currently writing to
 
@@ -250,15 +291,27 @@ namespace SecureWebServer.Service
                 }
             }
 
-            string htmlTemplate;
+            StringBuilder htmlBuilder = new StringBuilder(fileInfo.ReadFullString());
+            htmlBuilder.Replace("{LogEntries}", logHtml);
 
-            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
-                htmlTemplate = reader.ReadToEnd();
+            string clearLogButtonHtml;
 
-            htmlTemplate = htmlTemplate.Replace("{LogEntries}", logHtml);
+            if (_securityProvider.UserIsInRole(request.Path, "POST", request.User))
+            {
+                clearLogButtonHtml =
+@"<form action=""Log.html"" method=""POST"">
+<input type=""submit"" name=""ClearLog"" value=""Clear log""/>
+</form>";
+            }
+            else
+            {
+                clearLogButtonHtml = string.Empty;
+            }
+
+            htmlBuilder.Replace("{ClearLogButton}", clearLogButtonHtml);
 
             ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
-            response.SetStringContent(htmlTemplate, Encoding.ASCII, "text/html");
+            response.SetStringContent(htmlBuilder.ToString(), Encoding.ASCII, "text/html");
             return response;
         }
 
@@ -280,12 +333,38 @@ namespace SecureWebServer.Service
                 return response;
             }
 
-            string html;
-
-            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
-                html = reader.ReadToEnd();
+            string html = fileInfo.ReadFullString();
 
             response = new ResponseMessage(HttpStatusCode.OK);
+            response.SetStringContent(html, Encoding.ASCII, "text/html");
+            return response;
+        }
+
+        private ResponseMessage HandleLogoutRequest(RequestMessage request, FileInfo fileInfo)
+        {
+            ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
+
+            _securityProvider.LogoutUser(request, response);
+
+            string html = fileInfo.ReadFullString();
+            response.SetStringContent(html, Encoding.ASCII, "text/html");
+
+            return response;
+        }
+
+        private ResponseMessage HandleUserOverviewRequest(RequestMessage request, FileInfo fileInfo)
+        {
+            IList<User> users = _userRepository.GetAll();
+
+            StringBuilder userListHtmlBuilder = new StringBuilder();
+
+            foreach (User user in users)
+                userListHtmlBuilder.AppendLine($"<li><a href=\"/user/edit.html?id={user.Id}\">{user.Name}</a></li>");
+
+            string html = fileInfo.ReadFullString();
+            html = html.Replace("{UserList}", userListHtmlBuilder.ToString());
+
+            ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
             response.SetStringContent(html, Encoding.ASCII, "text/html");
             return response;
         }
@@ -318,11 +397,6 @@ namespace SecureWebServer.Service
                 _userRepository.Update(user);
             }
 
-            string html;
-
-            using (StreamReader reader = new StreamReader(fileInfo.OpenRead()))
-                html = reader.ReadToEnd();
-
             StringBuilder rolesHtmlBuilder = new StringBuilder();
 
             foreach (string role in SecurityProvider.Roles)
@@ -332,13 +406,13 @@ namespace SecureWebServer.Service
                     user.Roles.Contains(role, StringComparer.OrdinalIgnoreCase) ? " checked=\"checked\"" : string.Empty);
             }
 
-            html = html
-                .Replace("{UserId}", user.Id.ToString())
-                .Replace("{Username}", user.Name)
-                .Replace("{Roles}", rolesHtmlBuilder.ToString());
+            StringBuilder htmlBuilder = new StringBuilder(fileInfo.ReadFullString());
+            htmlBuilder.Replace("{UserId}", user.Id.ToString());
+            htmlBuilder.Replace("{Username}", user.Name);
+            htmlBuilder.Replace("{Roles}", rolesHtmlBuilder.ToString());
 
             ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
-            response.SetStringContent(html, Encoding.UTF8, "text/html");
+            response.SetStringContent(htmlBuilder.ToString(), Encoding.UTF8, "text/html");
             return response;
         }
 

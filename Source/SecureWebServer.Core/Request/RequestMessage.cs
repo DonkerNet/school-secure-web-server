@@ -13,13 +13,18 @@ namespace SecureWebServer.Core.Request
 {
     public class RequestMessage
     {
+        #region Read-only properties
+
         public string HttpMethod { get; }
         public string Path { get; }
         public NameValueCollection QueryString { get; }
         public string HttpVersion { get; }
         public NameValueCollection Headers { get; }
         public NameValueCollection FormData { get; }
-        public User User { get; } // TODO
+
+        #endregion
+
+        public User User { get; set; }
 
         private RequestMessage(string httpMethod, string path, NameValueCollection queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData)
         {
