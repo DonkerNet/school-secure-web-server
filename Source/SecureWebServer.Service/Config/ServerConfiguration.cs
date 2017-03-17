@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using PathHelper = SecureWebServer.Core.Helpers.PathHelper;
 
 namespace SecureWebServer.Service.Config
 {
@@ -122,6 +123,21 @@ namespace SecureWebServer.Service.Config
                 DefaultPages = new List<string>(DefaultPages),
                 DirectoryBrowsing = DirectoryBrowsing
             };
+        }
+
+        /// <summary>
+        /// Gets an existing default page.
+        /// </summary>
+        public string GetExistingDefaultPage()
+        {
+            foreach (string defaultPage in DefaultPages)
+            {
+                string path = PathHelper.Combine(WebRoot, defaultPage);
+                if (File.Exists(path))
+                    return defaultPage;
+            }
+
+            return string.Empty;
         }
     }
 }

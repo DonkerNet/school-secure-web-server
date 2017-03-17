@@ -5,7 +5,7 @@ namespace SecureWebServer.Core.Extensions
 {
     public static class FileInfoExtensions
     {
-        public static bool IsDirectory(this FileInfo fileInfo)
+        public static bool DirectoryExists(this FileInfo fileInfo)
         {
             return fileInfo.Attributes > 0
                 && (fileInfo.Attributes & FileAttributes.Directory) == FileAttributes.Directory;

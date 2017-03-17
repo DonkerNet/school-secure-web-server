@@ -22,19 +22,38 @@ namespace SecureWebServer.Service
         {
             _log.Error(exception);
 
+            HttpStatusCode statusCode;
+            string message;
+
             RequestException requestException = exception as RequestException;
 
             if (requestException == null)
-                return new ResponseMessage(HttpStatusCode.InternalServerError);
+            {
+                // Unknown/unexpected error
+                statusCode = HttpStatusCode.InternalServerError;
+                message = null;
+            }
+            else
+            {
+                // Deliberate error
+                statusCode = requestException.StatusCode;
+                message = requestException.Message;
+            }
 
-            ResponseMessage response = new ResponseMessage(requestException.StatusCode);
+            ResponseMessage response = CreateResponse(statusCode, message);
+            return response;
+        }
 
-            string errorPagePath = $"ErrorPages\\{(int)requestException.StatusCode}.html";
+        private ResponseMessage CreateResponse(HttpStatusCode statusCode, string message)
+        {
+            ResponseMessage response = new ResponseMessage(statusCode);
+
+            string errorPagePath = $"ErrorPages\\{(int)statusCode}.html";
 
             if (File.Exists(errorPagePath))
                 response.SetContentStream(File.OpenRead(errorPagePath), "text/html");
-            else
-                response.SetStringContent(requestException.Message, Encoding.ASCII, "text/plain");
+            else if (!string.IsNullOrEmpty(message))
+                response.SetStringContent(message, Encoding.ASCII, "text/plain");
 
             return response;
         }

@@ -136,9 +136,9 @@ namespace SecureWebServer.Service.Security
 
             foreach (string[] cookie in cookieHeader.Split(';').Select(c => c.Split('=')))
             {
-                if (string.Equals(cookie[0], "sessionToken"))
+                if (string.Equals(cookie[0].Trim(), "sessionToken"))
                 {
-                    sessionToken = cookie[1];
+                    sessionToken = cookie[1].Trim();
                     break;
                 }
             }

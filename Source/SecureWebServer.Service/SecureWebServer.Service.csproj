@@ -68,7 +68,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandHandlers\UserEditCommandHandler.cs" />
+    <Compile Include="CommandHandlers\UserOverviewCommandHandler.cs" />
     <Compile Include="Config\ServerConfiguration.cs" />
+    <Compile Include="CommandHandlers\CommandHandlerFactory.cs" />
+    <Compile Include="CommandHandlers\ConfigCommandHandler.cs" />
+    <Compile Include="CommandHandlers\ICommandHandler.cs" />
+    <Compile Include="CommandHandlers\IndexCommandHandler.cs" />
+    <Compile Include="CommandHandlers\LogCommandHandler.cs" />
+    <Compile Include="CommandHandlers\LoginCommandHandler.cs" />
+    <Compile Include="CommandHandlers\LogoutCommandHandler.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RequestHandler.cs" />
@@ -87,6 +96,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="ErrorPages\403.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ErrorPages\500.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="WebRoot\Images\Subfolder\NogietsMeerSubFolder\trollface.jpg">
