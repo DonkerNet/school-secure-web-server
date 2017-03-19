@@ -76,12 +76,13 @@ namespace SecureWebServer.Service.Config
                             WebPort = webPort;
                         break;
                     case nameof(WebRoot):
-                        WebRoot = values[key];
+                        if (PathHelper.IsValid(values[key]))
+                            WebRoot = values[key];
                         break;
                     case nameof(DefaultPages):
                         string defaultPages = values[key];
                         if (defaultPages != null)
-                            DefaultPages = defaultPages.Split(';').ToList();
+                            DefaultPages = defaultPages.Split(';').Where(PathHelper.IsValid).ToList();
                         break;
                     case nameof(DirectoryBrowsing):
                         DirectoryBrowsing = string.Equals(values[key], "true", StringComparison.InvariantCultureIgnoreCase);

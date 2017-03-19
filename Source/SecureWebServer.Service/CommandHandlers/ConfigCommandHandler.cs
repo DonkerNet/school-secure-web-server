@@ -33,6 +33,9 @@ namespace SecureWebServer.Service.CommandHandlers
             config.SetValues(request.FormData);
             config.Save();
 
+            ResponseMessage response = new ResponseMessage(HttpStatusCode.Redirect);
+            response.Headers["Location"] = "/";
+
             // If the port was changed and the host+port was specified in the headers, redirect to the new URL
             if (previousPort != config.WebPort)
             {
@@ -44,14 +47,13 @@ namespace SecureWebServer.Service.CommandHandlers
 
                     if (hostParts.Length > 1 && hostParts[1] == previousPort.ToString())
                     {
-                        ResponseMessage response = new ResponseMessage(HttpStatusCode.Redirect);
-                        response.Headers["Location"] = $"http://{hostParts[0]}:{config.WebPort}/{request.Path}";
+                        response.Headers["Location"] = $"http://{hostParts[0]}:{config.WebPort}";
                         return response;
                     }
                 }
             }
 
-            return CreateHtmlResponse(request, requestedFile, config);
+            return response;
         }
 
         private ResponseMessage CreateHtmlResponse(RequestMessage request, FileInfo requestedFile, ServerConfiguration config)

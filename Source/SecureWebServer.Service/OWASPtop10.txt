@@ -1,0 +1,38 @@
+﻿A1 - Injection
+Dit wordt voorkomen door bij queries gebruik te maken van parameters.
+Invoer wordt niet meteen in queries geplaatst maar als parameter met de query meegegeven.
+
+A2 - Broken Authentication and Session Management
+Wachtwoorden van gebruikers worden met SHA-512 gehashed opgeslagen. Hierbij wordt zowel de gebruikersnaam als een unieke salt gebruikt. De salt wordt ook bij het wachtwoord in de database opgeslagen.
+Voor login sessions wordt er een unieke token in een cookie opgeslagen, waarbij geen expiration date is meegegeven. Door dat laatste weet een browser dat het om een session cookie gaat. De session zelf heeft een sliding expiration van 20 minuten, oftewel: als er binnen 20 minuten geen activiteit meer is dan wordt de session als verlopen gezien en moet er opnieuw worden ingelogd.
+De verbinding gaat niet over HTTPS. Dit betekent dat de cookie voor een derde partij zichtbaar kan zijn.
+
+A3 - Cross-Site Scripting
+Bij het opslaan van rechten voor een gebruiker wordt er gecontroleerd of de rechten geldig zijn. Meer dan rechten worden ook niet opgeslagen.
+Bij het aanpassen van settings worden de waarde gecontroleerd of het formaat geldig is.
+Ook worden de Content-Security-Policy en X-XSS-Protection headers met de juiste waarden teruggestuurd met een response.
+
+A4 - Insecure Direct Object References
+Rechten van gebruikers worden gecontroleerd om te kijken of deze toegang heeft tot een bepaalde pagina, of om te bepalen wat er wel of niet op de pagina mag worden getoond of gedaan.
+Er worden geen directe verwijzingen naar resources gedaan, zoals ID's uit de database.
+
+A5 - Security Misconfiguration
+Niet van toepassing, met uitzondering van het stukje over het tonen van stack traces. Bij een exception wordt namelijk standaard een 500 error ZONDER informatie teruggestuurd. De uitzondering is wanneer er in de code bewust een exception van het type RequestException wordt veroorzaakt. In dit geval wordt ALLEEN de message van deze exception weergeven.
+
+A6 - Sensitive Data Exposure
+Wachtwoorden van gebruikers worden met SHA-512 gehashed opgeslagen. Hierbij wordt zowel de gebruikersnaam als een unieke salt gebruikt. De salt wordt ook bij het wachtwoord in de database opgeslagen.
+
+A7 - Missing Function Level Access Control
+Rechten van gebruikers worden gecontroleerd om te kijken of deze toegang heeft tot een bepaalde pagina, of om te bepalen wat er wel of niet op de pagina mag worden getoond of gedaan.
+
+A8 - Cross-Site Request Forgery (CSRF)
+Wel relevant, (nog) niet toegepast.
+
+A9 - Using Components with Known Vulnerabilities
+Niet relevant / niet naar gekeken.
+
+A10 - Unvalidated Redirects and Forwards
+Er worden redirects uitgevoerd naar vaste paden, zonder parameters. Bij het inloggen wordt er naar de hoofdpagina geredirect. Bij het aanpassen van de gebruiker wordt er geredirect naar de gebruikers overzicht pagina.
+
+
+Zie: https://www.owasp.org/index.php/Category:OWASP_Top_Ten_Project#OWASP_Top_10_for_2013

@@ -101,6 +101,7 @@
     <Content Include="ErrorPages\500.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="OWASPtop10.txt" />
     <Content Include="WebRoot\Images\Subfolder\NogietsMeerSubFolder\trollface.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
