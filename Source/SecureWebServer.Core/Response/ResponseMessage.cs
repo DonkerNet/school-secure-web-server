@@ -7,23 +7,40 @@ using SecureWebServer.Core.Extensions;
 
 namespace SecureWebServer.Core.Response
 {
+    /// <summary>
+    /// Represents a response message that can be returned to the client.
+    /// </summary>
     public class ResponseMessage
     {
         private Stream _content;
 
-        public string HttpVersion { get; }
+        /// <summary>
+        /// The HTTP version used for the response.
+        /// </summary>
+        public const string HttpVersion = "HTTP/1.0";
+        /// <summary>
+        /// Gets the status code of the response.
+        /// </summary>
         public HttpStatusCode StatusCode { get; }
+        /// <summary>
+        /// Gets a collection of headers to return with the response.
+        /// </summary>
         public NameValueCollection Headers { get; }
-        
+
+        /// <summary>
+        /// Creates a <see cref="ResponseMessage"/> using the specified HTTP status code.
+        /// </summary>
         public ResponseMessage(HttpStatusCode statusCode)
         {
-            HttpVersion = "HTTP/1.0";
             StatusCode = statusCode;
             Headers = new NameValueCollection();
         }
 
         #region Content methods
 
+        /// <summary>
+        /// Sets the specified stream content as the response body.
+        /// </summary>
         public void SetContentStream(Stream contentStream, string contentType)
         {
             _content?.Dispose();
@@ -33,6 +50,9 @@ namespace SecureWebServer.Core.Response
                 Headers["Content-Type"] = contentType;
         }
 
+        /// <summary>
+        /// Sets the content from the specified byte array as the response body.
+        /// </summary>
         public void SetByteContent(byte[] content, string contentType)
         {
             MemoryStream contentStream = new MemoryStream();
@@ -43,6 +63,9 @@ namespace SecureWebServer.Core.Response
             SetContentStream(contentStream, contentType);
         }
 
+        /// <summary>
+        /// Sets the specified string content as the response body.
+        /// </summary>
         public void SetStringContent(string content, Encoding encoding, string contentType)
         {
             byte[] buffer = null;
@@ -94,13 +117,13 @@ namespace SecureWebServer.Core.Response
 
                 writer.WriteLine("Connection: close");
 
-                // Write an empty line
+                // Write an empty line that marks the end of the headers
                 writer.WriteLine();
 
                 writer.Flush();
             }
 
-            // Finally, write the body
+            // Finally, write the body, if present
             if (_content?.Length > 0)
             {
                 _content.Position = 0;
@@ -108,7 +131,11 @@ namespace SecureWebServer.Core.Response
             }
         }
 
-        private string GetStatusDescription()
+        /// <summary>
+        /// Gets a humanly readable status description, based on the status code.
+        /// </summary>
+        /// <returns></returns>
+        public string GetStatusDescription()
         {
             switch (StatusCode)
             {
@@ -141,11 +168,15 @@ namespace SecureWebServer.Core.Response
             return descriptionBuilder.ToString();
         }
 
+        /// <summary>
+        /// Creates a string representation of the response's Status-Line and includes the headers if specified.
+        /// </summary>
         public string ToString(bool includeHeaders)
         {
             StringBuilder builder = new StringBuilder();
 
             // Append Status-Line
+            // A Status-Line looks like:  HTTP/1.1 200 OK
             builder.AppendFormat("{0} {1} {2}", HttpVersion, (int)StatusCode, GetStatusDescription());
 
             if (!includeHeaders)
@@ -164,6 +195,9 @@ namespace SecureWebServer.Core.Response
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Creates a string representation of the response's Status-Line and includes the headers.
+        /// </summary>
         public override string ToString()
         {
             return ToString(true);

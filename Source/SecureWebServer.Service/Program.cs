@@ -10,7 +10,7 @@ namespace SecureWebServer.Service
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             XmlConfigurator.Configure(new FileInfo("log4net.config"));
 
@@ -52,7 +52,7 @@ Type 'shutdown' to stop the server.");
                         canRun = false;
                         break;
                     default:
-                        Console.WriteLine("Huh?");
+                        Console.WriteLine("Watchu talking 'bout?");
                         break;
                 }
             }

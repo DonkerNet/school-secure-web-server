@@ -11,21 +11,46 @@ using SecureWebServer.Core.Extensions;
 
 namespace SecureWebServer.Core.Request
 {
+    /// <summary>
+    /// A class representing the request that came from a client.
+    /// </summary>
     public class RequestMessage
     {
         #region Read-only properties
 
+        /// <summary>
+        /// Gets the HTTP method used for the request (GET, POST, etc.)
+        /// </summary>
         public string HttpMethod { get; }
+        /// <summary>
+        /// Gets the request path.
+        /// </summary>
         public string Path { get; }
+        /// <summary>
+        /// Gets any query string parameters that were present.
+        /// </summary>
         public NameValueCollection QueryString { get; }
+        /// <summary>
+        /// Gets the HTTP version of the request.
+        /// </summary>
         public string HttpVersion { get; }
+        /// <summary>
+        /// Gets a collection of the headers that were sent with the request.
+        /// </summary>
         public NameValueCollection Headers { get; }
+        /// <summary>
+        /// Gets a collection of data that was sent by an HTML form, if present.
+        /// </summary>
         public NameValueCollection FormData { get; }
 
         #endregion
 
+        /// <summary>
+        /// Gets or sets the user that was authenticated and made this request.
+        /// </summary>
         public User User { get; set; }
 
+        // The constructor is private to force using the Create method for creating a new instance
         private RequestMessage(string httpMethod, string path, NameValueCollection queryString, string httpVersion, NameValueCollection headers, NameValueCollection formData)
         {
             HttpMethod = httpMethod;
@@ -39,26 +64,32 @@ namespace SecureWebServer.Core.Request
         public static RequestMessage Create(Stream inputStream)
         {
             NameValueCollection headers = new NameValueCollection();
-            NameValueCollection queryString = new NameValueCollection();
-            NameValueCollection formData = new NameValueCollection();
+            NameValueCollection queryString = null;
+            NameValueCollection formData = null;
             string httpMethod = null;
             string path = null;
             string httpVersion = null;
-            Stream content = null;
 
             bool readRequestLine = false;
 
             foreach (string header in ReadHeaders(inputStream))
             {
+                // Parse the Request-Line if it was not read yet
+                // Request-Line example:  GET http://www.website.com/something?key1=value1&key2=value2 HTTP/1.1
                 if (!readRequestLine)
                 {
+                    // If the request does not start with a Request-Line, it is propably not a request message we're dealing with
                     if (string.IsNullOrEmpty(header))
                         return null;
+
+                    // Validate the Request-Line
 
                     string[] requestLineParts = header.Split(new[] { ' ' }, 3);
 
                     if (requestLineParts.Length != 3)
                         throw new RequestException(HttpStatusCode.BadRequest, "Request-Line malformed.");
+
+                    // Parse all parts of the Request-Line
 
                     httpMethod = requestLineParts[0].ToUpperInvariant();
                     httpVersion = requestLineParts[2].ToUpperInvariant();
@@ -67,11 +98,15 @@ namespace SecureWebServer.Core.Request
                     path = requestUriParts[0];
 
                     if (requestUriParts.Length > 1)
-                        ParseQueryString(queryString, requestUriParts[1]);
+                        queryString = HttpUtility.ParseQueryString(requestUriParts[1]);
+
+                    // Request-Line has been read, so that means the next lines are headers
 
                     readRequestLine = true;
                     continue;
                 }
+
+                // Parse the header
 
                 string[] headerParts = header.Split(new[] { ':' }, 2);
 
@@ -83,8 +118,9 @@ namespace SecureWebServer.Core.Request
 
             if (!readRequestLine)
                 return null;
-            
-            // Read body if the Content-Length header is present
+
+            // Read body if the Content-Length header is present to determine if the request contains a body
+
             // TODO: what if there is a body but no Content-Length header?
 
             string contentLengthString = headers["Content-Length"];
@@ -95,17 +131,24 @@ namespace SecureWebServer.Core.Request
                 if (!int.TryParse(contentLengthString, out contentLength))
                     throw new RequestException(HttpStatusCode.BadRequest, "Invalid Content-Length header value.");
 
-                // Copy the content to a new stream and reset the streams position
-                content = new MemoryStream();
-                inputStream.CopyTo(content, 0, contentLength);
-                content.Position = 0L;
+                // Always read the body content, if present
 
-                // Read and parse formdata if the body contains formdata
+                using (Stream content = new MemoryStream())
+                {
+                    inputStream.CopyTo(content, 0, contentLength);
 
-                ParseFormData(headers, formData, content);
+                    // Read and parse formdata if the body contains formdata
+                    formData = ParseFormData(headers, content);
+                }
             }
 
-            return new RequestMessage(httpMethod, path, queryString, httpVersion, headers, formData);
+            return new RequestMessage(
+                httpMethod,
+                path,
+                queryString ?? new NameValueCollection(),
+                httpVersion,
+                headers,
+                formData ?? new NameValueCollection());
         }
 
         /// <summary>
@@ -116,7 +159,7 @@ namespace SecureWebServer.Core.Request
             // ASCII uses 1 byte per character
 
             // We read one character at a time
-            // We don't use a StreamReader since it buffers more characters than we want
+            // We don't use a StreamReader since it buffers more characters than we want, which may cause blocking
 
             using (BinaryReader reader = new BinaryReader(inputStream, Encoding.ASCII, true))
             {
@@ -154,21 +197,10 @@ namespace SecureWebServer.Core.Request
             }
         }
 
-        private static void ParseQueryString(NameValueCollection queryStringCollection, string queryString)
-        {
-            foreach (string field in queryString.Split(new []{ '&' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                string[] fieldParts = field.Split('=');
-                string fieldName = fieldParts[0];
-                string fieldValue = fieldParts.Length > 1 ? HttpUtility.UrlDecode(fieldParts[1]) : string.Empty;
-                queryStringCollection.Add(fieldName, fieldValue);
-            }
-        }
-
         /// <summary>
-        /// Checks if the request has a body containg form data, parses and places it into the form data collection.
+        /// Checks if the request has a body containg form data, parses and places it into a new form data collection.
         /// </summary>
-        private static void ParseFormData(NameValueCollection headers, NameValueCollection formData, Stream content)
+        private static NameValueCollection ParseFormData(NameValueCollection headers, Stream content)
         {
             string contentType = headers["Content-Type"];
 
@@ -178,7 +210,7 @@ namespace SecureWebServer.Core.Request
 
                 if (string.Equals(contentTypeParts[0], "application/x-www-form-urlencoded", StringComparison.InvariantCultureIgnoreCase)) // TODO: multipart/form-data support?
                 {
-                    // Parse charset if present or use default
+                    // Parse charset if present or use default (the charset determines the encoding of the form data)
 
                     string charsetPart = contentTypeParts.FirstOrDefault(ctp => ctp.StartsWith("charset", StringComparison.InvariantCultureIgnoreCase));
                     string charset = charsetPart != null && charsetPart.Contains('=')
@@ -186,39 +218,38 @@ namespace SecureWebServer.Core.Request
                         : null;
 
                     if (string.IsNullOrEmpty(charset))
-                        charset = "ISO-8859-1";
+                        charset = "ISO-8859-1"; // default encoding for form data if no charset was specified
 
                     Encoding encoding = Encoding.GetEncoding(charset);
 
                     // Convert the content stream to a string
                     byte[] contentBytes = new byte[content.Length];
-                    content.Read(contentBytes, 0, contentBytes.Length);
                     content.Position = 0L;
+                    content.Read(contentBytes, 0, contentBytes.Length);
                     string formDataString = encoding.GetString(contentBytes);
 
-                    // Extract the form data fields and put them in the header collection
-                    foreach (string formDataField in formDataString.Split('&').Where(i => !string.IsNullOrEmpty(i)))
-                    {
-                        string[] itemParts = formDataField.Split(new[] { '=' }, 2);
-
-                        string itemName = HttpUtility.UrlDecode(itemParts[0].Trim());
-                        string itemValue = itemParts.Length > 1 ? HttpUtility.UrlDecode(itemParts[1].Trim()) : string.Empty;
-
-                        formData.Add(itemName, itemValue);
-                    }
+                    // Parse the form data (which should be the same format as a query string)
+                    if (!string.IsNullOrEmpty(formDataString))
+                        return HttpUtility.ParseQueryString(formDataString);
                 }
             }
+
+            return null;
         }
 
+        /// <summary>
+        /// Creates a string representation of the Request-Line and includes the headers as well if that was specified. Does not output the body.
+        /// </summary>
         public string ToString(bool includeHeaders)
         {
             StringBuilder builder = new StringBuilder();
 
-            // Append Request-Line
             builder.AppendFormat("{0} /{1}", HttpMethod, Path);
 
             if (QueryString.Count > 0)
             {
+                // Build and append the query string if any query parameters are present
+
                 builder.Append('?');
 
                 int fieldCount = 0;
@@ -241,10 +272,11 @@ namespace SecureWebServer.Core.Request
 
             builder.AppendFormat(" {0}", HttpVersion);
 
+            // Append the headers if that was specified
+
             if (!includeHeaders)
                 return builder.ToString();
 
-            // Append headers
             foreach (string headerName in Headers.Keys)
             {
                 string[] headerValues = Headers.GetValues(headerName);
@@ -257,6 +289,9 @@ namespace SecureWebServer.Core.Request
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Creates a string representation of the Request-Line and includes the headers as well. Does not output the body.
+        /// </summary>
         public override string ToString()
         {
             return ToString(true);

@@ -8,6 +8,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Handler for authenticating a user.
+    /// </summary>
     public class LoginCommandHandler : ICommandHandler
     {
         private readonly SecurityProvider _securityProvider;
@@ -17,6 +20,9 @@ namespace SecureWebServer.Service.CommandHandlers
             _securityProvider = securityProvider;
         }
 
+        /// <summary>
+        /// Shows the login page.
+        /// </summary>
         public ResponseMessage HandleGet(RequestMessage request, FileInfo requestedFile)
         {
             string html = requestedFile.ReadFullString();
@@ -25,6 +31,9 @@ namespace SecureWebServer.Service.CommandHandlers
             return response;
         }
 
+        /// <summary>
+        /// Authenticates the user and redirects to the main page if succeeded.
+        /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
             string username = request.FormData["Username"];

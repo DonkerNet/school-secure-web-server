@@ -10,6 +10,9 @@ using SecureWebServer.DataAccess.Repositories;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Handles a request for showing an overview of the available users.
+    /// </summary>
     public class UserOverviewCommandHandler : ICommandHandler
     {
         private readonly UserRepository _userRepository;
@@ -19,6 +22,9 @@ namespace SecureWebServer.Service.CommandHandlers
             _userRepository = userRepository;
         }
 
+        /// <summary>
+        /// Creates a response showing an overview of the users of the webserver.
+        /// </summary>
         public ResponseMessage HandleGet(RequestMessage request, FileInfo requestedFile)
         {
             IList<User> users = _userRepository.GetAll();
@@ -36,6 +42,9 @@ namespace SecureWebServer.Service.CommandHandlers
             return response;
         }
 
+        /// <summary>
+        /// Simply handle a POST request as a GET.
+        /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
             return HandleGet(request, requestedFile);

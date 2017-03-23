@@ -11,6 +11,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Handler for showing or clearing the application log file.
+    /// </summary>
     public class LogCommandHandler : ICommandHandler
     {
         private readonly SecurityProvider _securityProvider;
@@ -20,6 +23,7 @@ namespace SecureWebServer.Service.CommandHandlers
         {
             _securityProvider = securityProvider;
 
+            // The log file's location needs to be retrieved from the log4net appender settings
             _logAppender = LogManager
                 .GetRepository()
                 .GetAppenders()
@@ -27,6 +31,9 @@ namespace SecureWebServer.Service.CommandHandlers
                 .FirstOrDefault();
         }
 
+        /// <summary>
+        /// Shows a page with all the log entries.
+        /// </summary>
         public ResponseMessage HandleGet(RequestMessage request, FileInfo requestedFile)
         {
             StringBuilder logHtmlBuilder = new StringBuilder();
@@ -46,6 +53,9 @@ namespace SecureWebServer.Service.CommandHandlers
             return CreateHtmlResponse(request, requestedFile, logHtml);
         }
 
+        /// <summary>
+        /// Clears the log if that was requested. If not, it simply handles this as a GET request.
+        /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
             if (!string.IsNullOrEmpty(request.FormData["ClearLog"]))
@@ -68,6 +78,7 @@ namespace SecureWebServer.Service.CommandHandlers
 
             string clearLogButtonHtml;
 
+            // The clear button can only be present if the user has that permission
             if (_securityProvider.UserIsInRole(request.Path, "POST", request.User))
             {
                 clearLogButtonHtml =

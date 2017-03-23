@@ -13,6 +13,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service
 {
+    /// <summary>
+    /// This class is the entry point for any new request that needs handling.
+    /// </summary>
     public class RequestHandler : IRequestHandler
     {
         private readonly SecurityProvider _securityProvider;
@@ -25,16 +28,19 @@ namespace SecureWebServer.Service
             _commandHandlerFactory = new CommandHandlerFactory(userRepository, _securityProvider);
         }
 
+        /// <summary>
+        /// Handles a new request.
+        /// </summary>
         public ResponseMessage Handle(RequestMessage request)
         {
+            // Check if there is an authenticated user and if the client is allowed to execute this request
             request.User = _securityProvider.GetUserForRequest(request);
-
             if (!_securityProvider.UserIsInRole(request.Path, request.HttpMethod, request.User))
                 throw new RequestException(HttpStatusCode.Forbidden, "Go away!");
 
             ServerConfiguration config = ServerConfiguration.Get();
 
-            // If no path is specified, try to find a valid default page
+            // If no path is specified, try to find a valid default page to show to the user
             string actualPath = request.Path;
             if (string.IsNullOrEmpty(actualPath))
                 actualPath = config.GetExistingDefaultPage();
@@ -64,7 +70,7 @@ namespace SecureWebServer.Service
             }
             else
             {
-                // Not a specific handler available, so handle it as a regular GET for a directory or file
+                // If there is no specific handler available, handle the request as a regular GET for a directory or file
 
                 if (request.HttpMethod != "GET")
                     throw new RequestException(HttpStatusCode.MethodNotAllowed, "Only GET is allowed.");
@@ -84,6 +90,7 @@ namespace SecureWebServer.Service
             return response;
         }
 
+        // Create a basic page showing the files and subfolders of the requested directory.
         private ResponseMessage HandleDirectoryBrowseRequest(RequestMessage request, FileInfo fileInfo)
         {
             ServerConfiguration config = ServerConfiguration.Get();
@@ -118,6 +125,7 @@ namespace SecureWebServer.Service
             return response;
         }
 
+        // Simply create a response containing a requested file
         private ResponseMessage HandleFileRequest(FileInfo fileInfo)
         {
             ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
@@ -135,6 +143,7 @@ namespace SecureWebServer.Service
         {
             //Prevent XSS attacks
             response.Headers.Add("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'");
+
             //If a browser does not support the header above they will use the header below:
             response.Headers.Add("X-XSS-Protection", "1; mode=block");
         }

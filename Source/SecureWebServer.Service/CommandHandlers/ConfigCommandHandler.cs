@@ -9,6 +9,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Handles a request for showing or updating the webserver's configuration.
+    /// </summary>
     public class ConfigCommandHandler : ICommandHandler
     {
         private readonly SecurityProvider _securityProvider;
@@ -18,12 +21,18 @@ namespace SecureWebServer.Service.CommandHandlers
             _securityProvider = securityProvider;
         }
 
+        /// <summary>
+        /// Shows the configuration of the webserver.
+        /// </summary>
         public ResponseMessage HandleGet(RequestMessage request, FileInfo requestedFile)
         {
             ServerConfiguration config = ServerConfiguration.Get();
             return CreateHtmlResponse(request, requestedFile, config);
         }
 
+        /// <summary>
+        /// Saves the new configuration and redirects to the homepage using the correct port.
+        /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
             ServerConfiguration config = ServerConfiguration.Get();
@@ -58,6 +67,7 @@ namespace SecureWebServer.Service.CommandHandlers
 
         private ResponseMessage CreateHtmlResponse(RequestMessage request, FileInfo requestedFile, ServerConfiguration config)
         {
+            // The save button is only visible for those with the proper permissions
             string saveButtonHtml = _securityProvider.UserIsInRole(request.Path, "POST", request.User)
                 ? "<td><input type=\"submit\" value=\"Save\"></td>"
                 : string.Empty;

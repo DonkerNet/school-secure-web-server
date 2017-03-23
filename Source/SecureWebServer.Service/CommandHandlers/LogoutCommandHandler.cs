@@ -8,6 +8,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Handler for logging out an authenticated user.
+    /// </summary>
     public class LogoutCommandHandler : ICommandHandler
     {
         private readonly SecurityProvider _securityProvider;
@@ -17,6 +20,9 @@ namespace SecureWebServer.Service.CommandHandlers
             _securityProvider = securityProvider;
         }
 
+        /// <summary>
+        /// Logsout the user and shows a message that is succeeded.
+        /// </summary>
         public ResponseMessage HandleGet(RequestMessage request, FileInfo requestedFile)
         {
             ResponseMessage response = new ResponseMessage(HttpStatusCode.OK);
@@ -29,6 +35,9 @@ namespace SecureWebServer.Service.CommandHandlers
             return response;
         }
 
+        /// <summary>
+        /// Simply handle a POST request as a GET.
+        /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
             return HandleGet(request, requestedFile);

@@ -3,6 +3,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Creates the correct command handler for the request path, if one exists.
+    /// </summary>
     public class CommandHandlerFactory
     {
         private readonly UserRepository _userRepository;
@@ -14,6 +17,9 @@ namespace SecureWebServer.Service.CommandHandlers
             _securityProvider = securityProvider;
         }
 
+        /// <summary>
+        /// Creates the correct command handler for the request path, if one exists.
+        /// </summary>
         public ICommandHandler Create(string path)
         {
             if (string.IsNullOrEmpty(path))

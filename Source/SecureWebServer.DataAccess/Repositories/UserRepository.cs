@@ -7,6 +7,9 @@ using SecureWebServer.Core.Entities;
 
 namespace SecureWebServer.DataAccess.Repositories
 {
+    /// <summary>
+    /// Repository for the retrieving and storing <see cref="User"/> entities.
+    /// </summary>
     public class UserRepository
     {
         private readonly string _connectionString;
@@ -16,6 +19,10 @@ namespace SecureWebServer.DataAccess.Repositories
             _connectionString = ConfigurationManager.ConnectionStrings["SecureWebServer"].ConnectionString;
         }
 
+        /// <summary>
+        /// Retrieves all users from the repository.
+        /// </summary>
+        /// <returns></returns>
         public IList<User> GetAll()
         {
             List<User> users = new List<User>();
@@ -41,6 +48,9 @@ namespace SecureWebServer.DataAccess.Repositories
             return users;
         }
 
+        /// <summary>
+        /// Retrieves a user by their ID.
+        /// </summary>
         public User GetById(Guid id)
         {
             User user = null;
@@ -71,6 +81,9 @@ namespace SecureWebServer.DataAccess.Repositories
             return user;
         }
 
+        /// <summary>
+        /// Retrieves a user by their username.
+        /// </summary>
         public User GetByName(string username)
         {
             User user = null;
@@ -101,6 +114,9 @@ namespace SecureWebServer.DataAccess.Repositories
             return user;
         }
 
+        /// <summary>
+        /// Saves changes to an existing user.
+        /// </summary>
         public void Update(User user)
         {
             // Currently, only the Roles column may be updated
@@ -130,6 +146,7 @@ namespace SecureWebServer.DataAccess.Repositories
 
         #region Helper methods for lazy devs
 
+        // Reads the data into an existing user object.
         private void PopulateUser(IDataReader reader, User user)
         {
             user.Id = (Guid)reader["Id"];

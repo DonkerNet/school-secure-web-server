@@ -12,8 +12,14 @@ using SecureWebServer.DataAccess.Repositories;
 
 namespace SecureWebServer.Service.Security
 {
+    /// <summary>
+    /// Class for managing authentication and authorization of users for HTTP requests.
+    /// </summary>
     public class SecurityProvider
     {
+        /// <summary>
+        /// Gets all the roles that are supported by the webserver.
+        /// </summary>
         public static string[] Roles { get; }
 
         private readonly NameValueCollection _userRoles;
@@ -31,15 +37,23 @@ namespace SecureWebServer.Service.Security
             };
         }
 
+        /// <summary>
+        /// Creates a new <see cref="SecurityProvider"/> instance where the specified user repository is used for retrieving users for authentication.
+        /// </summary>
         public SecurityProvider(UserRepository userRepository)
         {
+            // User roles and their permissions are configured in a section in the app.config
             _userRoles = (NameValueCollection)ConfigurationManager.GetSection("userRoles");
+
             _sessionCache = MemoryCache.Default;
             _hashEncoding = Encoding.UTF8;
             _hashAlgorithm = HashAlgorithm.Create("SHA-512");
             _userRepository = userRepository;
         }
 
+        /// <summary>
+        /// Checks if the specified role is supported.
+        /// </summary>
         public bool RoleExists(string role)
         {
             if (string.IsNullOrEmpty(role))
@@ -48,22 +62,29 @@ namespace SecureWebServer.Service.Security
             return Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
         }
 
-        public bool UserIsInRole(string path, string method, User user)
+        /// <summary>
+        /// Checks if the specified user is allowed to call the specified path using the specified HTTP method.
+        /// </summary>
+        public bool UserIsInRole(string path, string httpMethod, User user)
         {
             string roleString = _userRoles[path.ToLowerInvariant()];
 
+            // If no roles are configured for the path, assume everyone is allowed to see it
             if (string.IsNullOrEmpty(roleString))
                 return true;
+
+            // If roles are configured for a path, then the path may only be accessed by an existing user with the proper permissions
 
             if (user == null)
                 return false;
 
+            // Search for any role that the user has and that matches the specified path and HTTP method
             foreach (string[] roleParts in roleString.Split(';').Select(r => r.Split('=')))
             {
                 string roleName = roleParts[0];
                 string[] rolePermissions = roleParts[1].Split('|');
 
-                if (!rolePermissions.Contains(method))
+                if (!rolePermissions.Contains(httpMethod))
                     continue;
 
                 if (user.Roles.Contains(roleName))
@@ -73,6 +94,9 @@ namespace SecureWebServer.Service.Security
             return false;
         }
 
+        /// <summary>
+        /// Authenticates a user and writes a response cookie containing the token of the login session.
+        /// </summary>
         public bool AuthenticateUser(string username, string password, ResponseMessage response)
         {
             User user = _userRepository.GetByName(username);
@@ -94,6 +118,9 @@ namespace SecureWebServer.Service.Security
             return false;
         }
 
+        /// <summary>
+        /// Gets a user based on the token of the login session, if that is present in the request and the user is actually authenticated.
+        /// </summary>
         public User GetUserForRequest(RequestMessage request)
         {
             string sessionToken = GetSessionTokenFromRequest(request);
@@ -104,6 +131,9 @@ namespace SecureWebServer.Service.Security
             return _sessionCache[$"SessionUser_{sessionToken}"] as User;
         }
 
+        /// <summary>
+        /// Logs out a user and clears the login session cookie.
+        /// </summary>
         public void LogoutUser(RequestMessage request, ResponseMessage response)
         {
             string sessionToken = GetSessionTokenFromRequest(request);
@@ -117,6 +147,7 @@ namespace SecureWebServer.Service.Security
             request.User = null;
         }
 
+        // Creates a base64 password hash
         private string CreatePasswordHash(string username, string password, string salt)
         {
             string input = $"{username}|{password}|{salt}";
@@ -125,6 +156,7 @@ namespace SecureWebServer.Service.Security
             return Convert.ToBase64String(hashBytes);
         }
 
+        // Extracts the session token from the request cookie if it is present
         private string GetSessionTokenFromRequest(RequestMessage request)
         {
             string cookieHeader = request.Headers["Cookie"];

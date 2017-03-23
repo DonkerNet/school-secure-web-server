@@ -8,18 +8,37 @@ using PathHelper = SecureWebServer.Core.Helpers.PathHelper;
 
 namespace SecureWebServer.Service.Config
 {
+    /// <summary>
+    /// Contains the configuration to use for the webserver.
+    /// </summary>
     public class ServerConfiguration
     {
         private static ServerConfiguration _instance;
 
         private const string FilePath = "ServerConfiguration.json";
-        public static Action<ServerConfiguration> SavedCallback { get; set; }
 
+        /// <summary>
+        /// Gets or sets the callback to call when changes to the configuration have been made and saved to the configuration file.
+        /// </summary>
+        public static Action<ServerConfiguration> SavedCallback { get; set; }
+        /// <summary>
+        /// Gets or sets the port the webserver should use for listening.
+        /// </summary>
         public int WebPort { get; set; }
+        /// <summary>
+        /// Gets or sets the root folder where the HTML pages and other files are stored.
+        /// </summary>
         public string WebRoot { get; set; }
+        /// <summary>
+        /// Gets or sets a list of available default pages used for when the user navigates to the homepage.
+        /// </summary>
         public IList<string> DefaultPages { get; set; }
+        /// <summary>
+        /// Gets or sets if directory browsing is enabled.
+        /// </summary>
         public bool DirectoryBrowsing { get; set; }
 
+        // We use a private constructor to force using the Get() method for retrieving the configuration
         private ServerConfiguration()
         {
         }
@@ -55,7 +74,7 @@ namespace SecureWebServer.Service.Config
                 _instance = config ?? new ServerConfiguration();
             }
 
-            // Return a copy so that any changes to that copy do not affect configuration instances used by other threads (requests)
+            // Return a copy so that any changes to that copy do not affect configuration instances used by other threads/requests
             return _instance.Copy();
         }
 
@@ -92,7 +111,7 @@ namespace SecureWebServer.Service.Config
         }
 
         /// <summary>
-        /// Saves this configuration's changes and writes these to the file.
+        /// Saves this configuration's changes, writes these to the file and calls the callback method.
         /// </summary>
         public void Save()
         {
@@ -127,7 +146,7 @@ namespace SecureWebServer.Service.Config
         }
 
         /// <summary>
-        /// Gets an existing default page.
+        /// Gets the first existing default page that is found, based on the pages configured in the <see cref="DefaultPages"/> property.
         /// </summary>
         public string GetExistingDefaultPage()
         {

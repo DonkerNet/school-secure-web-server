@@ -12,6 +12,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Handles a request for showing or updating a user's roles.
+    /// </summary>
     public class UserEditCommandHandler : ICommandHandler
     {
         private readonly UserRepository _userRepository;
@@ -23,12 +26,18 @@ namespace SecureWebServer.Service.CommandHandlers
             _securityProvider = securityProvider;
         }
 
+        /// <summary>
+        /// Creates a response showing information about the user.
+        /// </summary>
         public ResponseMessage HandleGet(RequestMessage request, FileInfo requestedFile)
         {
             User user = GetUser(request.QueryString["id"]);
             return CreateHtmlResponse(requestedFile, user);
         }
 
+        /// <summary>
+        /// Updates the user's roles and redirects to the user overview page.
+        /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
             User user = GetUser(request.FormData["UserId"]);

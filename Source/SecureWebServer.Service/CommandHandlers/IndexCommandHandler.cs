@@ -8,6 +8,9 @@ using SecureWebServer.Service.Security;
 
 namespace SecureWebServer.Service.CommandHandlers
 {
+    /// <summary>
+    /// Handles a request to show the homepage.
+    /// </summary>
     public class IndexCommandHandler : ICommandHandler
     {
         private readonly SecurityProvider _securityProvider;
@@ -17,6 +20,9 @@ namespace SecureWebServer.Service.CommandHandlers
             _securityProvider = securityProvider;
         }
 
+        /// <summary>
+        /// Builds the index page with a list of links available to the user, based on their permissions.
+        /// </summary>
         public ResponseMessage HandleGet(RequestMessage request, FileInfo requestedFile)
         {
             StringBuilder linkHtmlBuilder = new StringBuilder();
@@ -44,6 +50,9 @@ namespace SecureWebServer.Service.CommandHandlers
             return response;
         }
 
+        /// <summary>
+        /// Simply handle a POST request as a GET.
+        /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
             return HandleGet(request, requestedFile);
