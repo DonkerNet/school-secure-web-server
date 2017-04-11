@@ -44,8 +44,8 @@ namespace SecureWebServer.Service.CommandHandlers
 
                 while ((logLine = reader.ReadLine()) != null)
                 {
-                    logHtmlBuilder.Append(logLine.Replace(" ", "&nbsp;"));
                     logHtmlBuilder.AppendLine("<br/>");
+                    logHtmlBuilder.Append(logLine.Replace(" ", "&nbsp;"));
                 }
             }
 
@@ -58,7 +58,7 @@ namespace SecureWebServer.Service.CommandHandlers
         /// </summary>
         public ResponseMessage HandlePost(RequestMessage request, FileInfo requestedFile)
         {
-            if (!string.IsNullOrEmpty(request.FormData["ClearLog"]))
+            if (string.IsNullOrEmpty(request.FormData["ClearLog"]))
                 return HandleGet(request, requestedFile);
 
             using (Stream logStream = File.OpenWrite(_logAppender.File))
