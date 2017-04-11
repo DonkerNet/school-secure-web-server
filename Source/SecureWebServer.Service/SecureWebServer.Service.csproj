@@ -129,6 +129,9 @@
     <Content Include="WebRoot\Log.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="WebRoot\style.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="WebRoot\User\Overview.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

@@ -142,7 +142,7 @@ namespace SecureWebServer.Service
         private void AddDefaultResponseHeaders(ResponseMessage response)
         {
             //Prevent XSS attacks
-            response.Headers.Add("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'");
+            response.Headers.Add("Content-Security-Policy", "default-src 'self' script-src 'unsafe-inline' 'unsafe-eval'");
 
             //If a browser does not support the header above they will use the header below:
             response.Headers.Add("X-XSS-Protection", "1; mode=block");
